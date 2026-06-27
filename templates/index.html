@@ -14,9 +14,6 @@
             <div>
                 <a href="/" class="btn btn-sm btn-outline-light me-2">🏠 Trang chủ</a>
                 <a href="/van-dong-vien?return_to=/giai-dau" class="btn btn-sm btn-outline-info me-2">👥 Vận động viên</a>
-                {% if session.user.email|lower == super_admin_email %}
-                <a href="/admin-settings" class="btn btn-sm btn-outline-warning me-2">⚙️ Tài khoản admin</a>
-                {% endif %}
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">🚪 Đăng xuất</a>
             </div>
         </div>

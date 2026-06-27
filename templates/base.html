@@ -26,9 +26,6 @@
                         {% if request.path != '/thanh-vien' %}
                             <a class="btn btn-sm btn-outline-light" href="/thanh-vien">Thành viên</a>
                         {% endif %}
-                        {% if session.user.email == super_admin_email and request.path != '/admin-settings' %}
-                            <a class="btn btn-sm btn-outline-light" href="/admin-settings">Quản lý admin</a>
-                        {% endif %}
                     {% else %}
                         {% if request.path != '/nguoi-xem' %}
                             <a class="btn btn-sm btn-outline-light" href="/nguoi-xem">Trang chủ</a>

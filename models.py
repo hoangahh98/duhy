@@ -60,6 +60,10 @@ class UserModel:
             return cursor.fetchone()
 
     @staticmethod
+    def get_admin_by_id(admin_id):
+        return UserModel.get_admin(admin_id)
+
+    @staticmethod
     def create_admin(email, password, display_name):
         with db_cursor(commit=True) as cursor:
             cursor.execute(
@@ -108,7 +112,7 @@ class UserModel:
             cursor.execute("SELECT name FROM trip_members WHERE id = %s;", (member_id,))
             member = cursor.fetchone()
             if not member:
-                raise ValueError("Không tìm thấy du hý er")
+                raise ValueError("Không tìm thấy thành viên")
             cursor.execute(
                 """
                 INSERT INTO travel_users (email, password_hash, role, display_name)
@@ -446,7 +450,7 @@ class FinanceModel:
         if amount < 0:
             raise ValueError("Số tiền chi không hợp lệ")
         if not member_ids:
-            raise ValueError("Cần có du hý er để chia tiền")
+            raise ValueError("Cần có thành viên để chia tiền")
         base = amount // len(member_ids)
         remainder = int(amount - (base * len(member_ids)))
         splits = []

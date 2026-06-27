@@ -19,24 +19,6 @@
             return;
         }
 
-        if (form.id === 'addMemberForm') {
-            const rebalance = form.querySelector('[name="rebalance_expenses"]');
-            if (rebalance && !rebalance.checked) {
-                const ok = window.confirm('Bạn có muốn giữ nguyên các khoản chi cũ? Người mới sẽ chỉ được tính vào các khoản chi phát sinh sau này.');
-                if (!ok) {
-                    event.preventDefault();
-                    return;
-                }
-            }
-            if (rebalance && rebalance.checked) {
-                const ok = window.confirm('Bạn đã chọn tính toán lại. Tất cả khoản chi cũ sẽ được chia đều lại cho mọi người. Tiếp tục?');
-                if (!ok) {
-                    event.preventDefault();
-                    return;
-                }
-            }
-        }
-
         window.setTimeout(function() {
             if (event.defaultPrevented) {
                 return;

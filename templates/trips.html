@@ -34,7 +34,7 @@
                     <div class="card-body">
                         <h2 class="h5 text-success fw-bold">{{ trip[1] }}</h2>
                         <p class="text-muted min-note">{{ trip[2] or 'Chưa có ghi chú' }}</p>
-                        <div class="small text-muted mb-3">👥 {{ trip[3] }} du hý er</div>
+                        <div class="small text-muted mb-3">👥 {{ trip[3] }} thành viên</div>
                         <div class="d-grid gap-2">
                             <a class="btn btn-primary" href="/chuyen-di/{{ trip[0] }}">Xem chi tiết</a>
                             <form action="/chuyen-di/{{ trip[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa chuyến đi này?')">

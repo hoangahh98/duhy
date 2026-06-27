@@ -177,6 +177,7 @@ def trip_detail(trip_id):
         summary=build_summary(members, expenses),
         today=date.today().isoformat(),
         admins=UserModel.get_available_admins_for_trip(trip_id, trip[3], user["id"]),
+        owner_admin=UserModel.get_admin_by_id(trip[3]) if trip[3] else None,
         permissions=TripModel.permissions(trip_id),
         can_manage_permissions=is_super_admin(user) or trip[3] == user["id"],
     )
@@ -189,14 +190,11 @@ def add_member(trip_id):
         return "Không có quyền", 403
     name = (request.form.get("name") or "").strip()
     if not name:
-        flash("Tên du hý er là bắt buộc.", "danger")
+        flash("Tên thành viên là bắt buộc.", "danger")
         return redirect(url_for("trip_detail", trip_id=trip_id))
     FinanceModel.add_member(trip_id, name, request.form.get("email", ""))
-    if request.form.get("rebalance_expenses") == "1":
-        FinanceModel.rebalance_expenses_equal(trip_id)
-        flash("Đã thêm du hý er và chia đều lại toàn bộ khoản chi.", "success")
-    else:
-        flash("Đã thêm du hý er. Các khoản chi cũ được giữ nguyên.", "success")
+    FinanceModel.rebalance_expenses_equal(trip_id)
+    flash("Đã thêm thành viên và chia đều lại toàn bộ khoản chi.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 

@@ -13,7 +13,6 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="/chuyen-di" class="btn btn-sm btn-outline-light bg-dark">⬅️ Chuyến đi</a>
-                <a href="/du-hy-er" class="btn btn-sm btn-info text-white fw-bold">👥 Du hý er</a>
             </div>
         </div>
     </div>
@@ -54,7 +53,7 @@
             <div class="card h-100">
                 <div class="card-hdr green">Thêm du hý er</div>
                 <div class="card-body">
-                    <form action="/chuyen-di/{{ trip[0] }}/thanh-vien" method="POST" class="vstack gap-2">
+                    <form action="/chuyen-di/{{ trip[0] }}/thanh-vien" method="POST" class="vstack gap-2" id="addMemberForm">
                         <div>
                             <label class="form-label small fw-semibold">Tên người đi</label>
                             <input class="form-control" name="name" placeholder="Nguyễn Văn A" required>
@@ -63,7 +62,12 @@
                             <label class="form-label small fw-semibold">Email người xem</label>
                             <input class="form-control" name="email" type="email" placeholder="email@example.com">
                         </div>
-                        <button class="btn btn-success fw-bold">Thêm vào chuyến đi</button>
+                        <label class="form-check border rounded p-2 ps-5 bg-light">
+                            <input class="form-check-input" type="checkbox" name="rebalance_expenses" value="1">
+                            <span class="form-check-label fw-semibold">Tính toán lại và chia đều lại tất cả khoản chi cho mọi người</span>
+                            <span class="form-text d-block">Nếu không chọn, người mới chỉ tham gia các khoản chi phát sinh sau này.</span>
+                        </label>
+                        <button class="btn btn-success fw-bold" data-loading-text="Đang thêm...">Thêm vào chuyến đi</button>
                     </form>
                 </div>
             </div>
@@ -87,7 +91,6 @@
                                     <td>{{ summary.member_spent[member[0]]|vnd }}đ</td>
                                     <td class="{% if summary.balances[member[0]] < 0 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ summary.balances[member[0]]|vnd }}đ</td>
                                     <td class="text-end text-nowrap">
-                                        <a class="btn btn-sm btn-warning py-0" href="/du-hy-er/{{ member[0] }}/sua">✏️</a>
                                         <form class="d-inline" action="/chuyen-di/{{ trip[0] }}/thanh-vien/{{ member[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa du hý er này khỏi chuyến đi?')">
                                             <button class="btn btn-sm btn-danger py-0">🗑️</button>
                                         </form>
@@ -125,7 +128,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button class="btn btn-primary w-100">Lưu tiền thu</button>
+                        <button class="btn btn-primary w-100" data-loading-text="Đang lưu...">Lưu tiền thu</button>
                     </form>
                 </div>
             </div>
@@ -151,7 +154,7 @@
                             <input class="form-control" type="number" min="0" step="1" name="amount" required>
                         </div>
                         <div class="col-md-2 d-grid">
-                            <button class="btn btn-success">Thêm</button>
+                            <button class="btn btn-success" data-loading-text="Đang thêm...">Thêm</button>
                         </div>
                         <div class="col-12">
                             <input class="form-control" name="note" placeholder="Ghi chú khoản chi">
@@ -197,7 +200,7 @@
                                 <div class="small split-status"></div>
                             </td>
                             <td class="expense-actions">
-                                <button form="expense-form-{{ row[0] }}" class="btn btn-sm btn-primary mb-1 w-100">Lưu</button>
+                                <button form="expense-form-{{ row[0] }}" class="btn btn-sm btn-primary mb-1 w-100" data-loading-text="Đang lưu...">Lưu</button>
                                 <form action="/chuyen-di/{{ trip[0] }}/chi/{{ row[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa khoản chi này?')">
                                     <button class="btn btn-sm btn-outline-danger w-100">Xóa</button>
                                 </form>
@@ -224,7 +227,7 @@
                         <option value="{{ admin[0] }}">{{ admin[1] }}</option>
                     {% endfor %}
                 </select>
-                <button class="btn btn-primary">Thêm</button>
+                <button class="btn btn-primary" data-loading-text="Đang thêm...">Thêm</button>
             </form>
             {% if not admins %}
             <div class="text-muted small mb-3">Không còn admin nào có thể cấp thêm quyền.</div>

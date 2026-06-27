@@ -1,7 +1,7 @@
 from datetime import date
 from secrets import token_urlsafe
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, render_template, request, send_from_directory, session, url_for
 
 from auth import AuthService, admin_required, login_required
 from config import APP_NAME, FLASK_SECRET_KEY, SUPER_ADMIN_EMAIL
@@ -60,74 +60,6 @@ def trips():
         user=user,
         super_admin_email=SUPER_ADMIN_EMAIL,
     )
-
-
-@app.route("/du-hy-er")
-@admin_required
-def du_hy_er_list():
-    user = session["user"]
-    members = FinanceModel.all_members_for_admin(admin_scope_id(user))
-    trip_member_counts = {}
-    for member in members:
-        trip_member_counts[member[4]] = trip_member_counts.get(member[4], 0) + 1
-    return render_template(
-        "du_hy_er.html",
-        members=members,
-        trips=TripModel.all_for_admin(admin_scope_id(user)),
-        trip_member_counts=trip_member_counts,
-        user=user,
-    )
-
-
-@app.route("/du-hy-er/them", methods=["POST"])
-@admin_required
-def du_hy_er_add():
-    user = session["user"]
-    trip_id = request.form.get("trip_id")
-    trip = TripModel.get_for_admin(trip_id, admin_scope_id(user)) if trip_id else None
-    if not trip:
-        flash("Bạn chưa chọn chuyến đi hợp lệ.", "danger")
-        return redirect(url_for("du_hy_er_list"))
-    name = (request.form.get("name") or "").strip()
-    if not name:
-        flash("Tên du hý er là bắt buộc.", "danger")
-        return redirect(url_for("du_hy_er_list"))
-    FinanceModel.add_member(trip_id, name, request.form.get("email", ""))
-    flash("Đã thêm du hý er vào chuyến đi.", "success")
-    return redirect(url_for("du_hy_er_list"))
-
-
-@app.route("/du-hy-er/<int:member_id>/sua", methods=["GET", "POST"])
-@admin_required
-def du_hy_er_edit(member_id):
-    user = session["user"]
-    member = FinanceModel.get_member_for_admin(member_id, admin_scope_id(user))
-    if not member:
-        return "Không có quyền sửa người đi này", 403
-    if request.method == "POST":
-        name = (request.form.get("name") or "").strip()
-        if not name:
-            flash("Tên du hý er là bắt buộc.", "danger")
-            return redirect(url_for("du_hy_er_edit", member_id=member_id))
-        FinanceModel.update_member(member_id, name, request.form.get("email", ""))
-        password = request.form.get("password") or ""
-        if request.form.get("create_viewer") and request.form.get("email"):
-            UserModel.create_viewer_for_member(member_id, request.form.get("email"), password or "123456789")
-        flash("Đã cập nhật du hý er.", "success")
-        return redirect(url_for("du_hy_er_list"))
-    return render_template("du_hy_er_edit.html", member=member)
-
-
-@app.route("/du-hy-er/<int:member_id>/xoa", methods=["POST"])
-@admin_required
-def du_hy_er_delete(member_id):
-    user = session["user"]
-    member = FinanceModel.get_member_for_admin(member_id, admin_scope_id(user))
-    if not member:
-        return "Không có quyền xóa người đi này", 403
-    FinanceModel.delete_member(member[1], member_id)
-    flash("Đã xóa du hý er khỏi chuyến đi.", "success")
-    return redirect(url_for("du_hy_er_list"))
 
 
 @app.route("/admin-settings")
@@ -255,6 +187,11 @@ def add_member(trip_id):
         flash("Tên du hý er là bắt buộc.", "danger")
         return redirect(url_for("trip_detail", trip_id=trip_id))
     FinanceModel.add_member(trip_id, name, request.form.get("email", ""))
+    if request.form.get("rebalance_expenses") == "1":
+        FinanceModel.rebalance_expenses_equal(trip_id)
+        flash("Đã thêm du hý er và chia đều lại toàn bộ khoản chi.", "success")
+    else:
+        flash("Đã thêm du hý er. Các khoản chi cũ được giữ nguyên.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
@@ -406,6 +343,11 @@ def viewer_trip(trip_id):
 @app.route("/healthz")
 def healthz():
     return "ok"
+
+
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory("static", "service-worker.js")
 
 
 @app.cli.command("secret-key")

@@ -367,6 +367,36 @@ class FinanceModel:
             )
 
     @staticmethod
+    def rebalance_expenses_equal(trip_id):
+        members = FinanceModel.members(trip_id)
+        member_ids = [member[0] for member in members]
+        if not member_ids:
+            return
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                SELECT id, amount
+                FROM trip_expenses
+                WHERE trip_id = %s
+                ORDER BY id ASC;
+                """,
+                (trip_id,),
+            )
+            expenses = cursor.fetchall()
+            for expense_id, amount in expenses:
+                amount = money(amount)
+                base = amount // len(member_ids)
+                remainder = int(amount - (base * len(member_ids)))
+                splits = []
+                for index, member_id in enumerate(member_ids):
+                    splits.append((expense_id, member_id, base + (1 if index < remainder else 0)))
+                cursor.execute("DELETE FROM trip_expense_splits WHERE expense_id = %s;", (expense_id,))
+                cursor.executemany(
+                    "INSERT INTO trip_expense_splits (expense_id, member_id, amount) VALUES (%s, %s, %s);",
+                    splits,
+                )
+
+    @staticmethod
     def update_collections(trip_id, updates):
         with db_cursor(commit=True) as cursor:
             cursor.executemany(

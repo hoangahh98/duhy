@@ -7,7 +7,6 @@
             <div class="text-muted">Admin gốc: {{ super_admin_email }}</div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a class="btn btn-info text-white fw-bold" href="/du-hy-er">👥 Du hý er</a>
             {% if user.email == super_admin_email %}
                 <a class="btn btn-outline-primary" href="/admin-settings">Quản lý admin</a>
             {% endif %}
@@ -27,7 +26,7 @@
                     <input class="form-control" name="description" placeholder="Thời gian, địa điểm...">
                 </div>
                 <div class="col-md-2 d-grid">
-                    <button class="btn btn-success fw-bold" type="submit">Thêm</button>
+                    <button class="btn btn-success fw-bold" type="submit" data-loading-text="Đang thêm...">Thêm</button>
                 </div>
             </form>
         </div>

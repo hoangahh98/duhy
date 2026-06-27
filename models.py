@@ -132,6 +132,15 @@ class UserModel:
                 "UPDATE trip_members SET user_id = %s, email = %s WHERE id = %s;",
                 (user_id, email, member_id),
             )
+            cursor.execute(
+                """
+                UPDATE travel_people p
+                SET user_id = %s, email = %s, updated_at = CURRENT_TIMESTAMP
+                FROM trip_members tm
+                WHERE tm.person_id = p.id AND tm.id = %s;
+                """,
+                (user_id, email, member_id),
+            )
             return user_id
 
 
@@ -224,11 +233,16 @@ class PeopleModel:
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
-                INSERT INTO travel_people (name, email, owner_admin_id)
-                VALUES (%s, %s, %s)
+                INSERT INTO travel_people (name, email, owner_admin_id, user_id)
+                VALUES (
+                    %s,
+                    %s,
+                    %s,
+                    (SELECT id FROM travel_users WHERE lower(email) = lower(%s) AND role = 'viewer' LIMIT 1)
+                )
                 RETURNING id;
                 """,
-                (name, (email or "").strip().lower(), owner_admin_id),
+                (name, (email or "").strip().lower(), owner_admin_id, (email or "").strip().lower()),
             )
             return cursor.fetchone()[0]
 
@@ -238,18 +252,23 @@ class PeopleModel:
             cursor.execute(
                 """
                 UPDATE travel_people
-                SET name = %s, email = %s, updated_at = CURRENT_TIMESTAMP
+                SET name = %s,
+                    email = %s,
+                    user_id = (SELECT id FROM travel_users WHERE lower(email) = lower(%s) AND role = 'viewer' LIMIT 1),
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
                 """,
-                (name, (email or "").strip().lower(), person_id),
+                (name, (email or "").strip().lower(), (email or "").strip().lower(), person_id),
             )
             cursor.execute(
                 """
                 UPDATE trip_members
-                SET name = %s, email = %s
+                SET name = %s,
+                    email = %s,
+                    user_id = (SELECT id FROM travel_users WHERE lower(email) = lower(%s) AND role = 'viewer' LIMIT 1)
                 WHERE person_id = %s AND active = TRUE;
                 """,
-                (name, (email or "").strip().lower(), person_id),
+                (name, (email or "").strip().lower(), (email or "").strip().lower(), person_id),
             )
 
     @staticmethod
@@ -288,17 +307,18 @@ class TripModel:
             return cursor.fetchall()
 
     @staticmethod
-    def all_for_viewer(user_id):
+    def all_for_viewer(user_id, email=None):
         with db_cursor() as cursor:
             cursor.execute(
                 """
                 SELECT t.id, t.name, t.description, tm.name
                 FROM trips t
                 INNER JOIN trip_members tm ON t.id = tm.trip_id
-                WHERE tm.user_id = %s AND tm.active = TRUE
+                WHERE tm.active = TRUE
+                  AND (tm.user_id = %s OR (%s IS NOT NULL AND lower(tm.email) = lower(%s)))
                 ORDER BY t.id DESC;
                 """,
-                (user_id,),
+                (user_id, email, email),
             )
             return cursor.fetchall()
 
@@ -320,16 +340,18 @@ class TripModel:
             return cursor.fetchone()
 
     @staticmethod
-    def get_for_viewer(trip_id, user_id):
+    def get_for_viewer(trip_id, user_id, email=None):
         with db_cursor() as cursor:
             cursor.execute(
                 """
                 SELECT t.id, t.name, t.description, tm.id, tm.name
                 FROM trips t
                 INNER JOIN trip_members tm ON t.id = tm.trip_id
-                WHERE t.id = %s AND tm.user_id = %s AND tm.active = TRUE;
+                WHERE t.id = %s
+                  AND tm.active = TRUE
+                  AND (tm.user_id = %s OR (%s IS NOT NULL AND lower(tm.email) = lower(%s)));
                 """,
-                (trip_id, user_id),
+                (trip_id, user_id, email, email),
             )
             return cursor.fetchone()
 

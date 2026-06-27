@@ -119,6 +119,30 @@ def init_schema():
         )
         cursor.execute(
             """
+            UPDATE trip_members tm
+            SET user_id = u.id
+            FROM travel_users u
+            WHERE tm.user_id IS NULL
+              AND tm.email <> ''
+              AND lower(tm.email) = lower(u.email)
+              AND u.role = 'viewer'
+              AND tm.active = TRUE;
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE travel_people p
+            SET user_id = u.id
+            FROM travel_users u
+            WHERE p.user_id IS NULL
+              AND p.email <> ''
+              AND lower(p.email) = lower(u.email)
+              AND u.role = 'viewer'
+              AND p.active = TRUE;
+            """
+        )
+        cursor.execute(
+            """
             INSERT INTO travel_users (email, password_hash, role, display_name)
             VALUES (%s, %s, 'admin', 'Admin')
             ON CONFLICT (email) DO NOTHING;

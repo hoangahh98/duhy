@@ -20,10 +20,12 @@
             <div class="d-flex gap-2 align-items-center flex-wrap">
                 {% if session.get('user') %}
                     {% if session.user.role == 'admin' %}
-                        {% if request.path.startswith('/chuyen-di/') or request.path == '/admin-settings' %}
+                        {% if request.path.startswith('/chuyen-di/') or request.path == '/admin-settings' or request.path == '/thanh-vien' %}
                             <a class="btn btn-sm btn-outline-light" href="/chuyen-di">Trang chủ</a>
                         {% endif %}
-                        <a class="btn btn-sm btn-outline-light" href="/thanh-vien">Thành viên</a>
+                        {% if request.path != '/thanh-vien' %}
+                            <a class="btn btn-sm btn-outline-light" href="/thanh-vien">Thành viên</a>
+                        {% endif %}
                         {% if session.user.email == super_admin_email and request.path != '/admin-settings' %}
                             <a class="btn btn-sm btn-outline-light" href="/admin-settings">Quản lý admin</a>
                         {% endif %}

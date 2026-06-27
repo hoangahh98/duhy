@@ -389,7 +389,8 @@ def remove_permission(trip_id, permission_id):
 def viewer_dashboard():
     if session["user"]["role"] != "viewer":
         return redirect(url_for("trips"))
-    return render_template("viewer_dashboard.html", trips=TripModel.all_for_viewer(session["user"]["id"]))
+    user = session["user"]
+    return render_template("viewer_dashboard.html", trips=TripModel.all_for_viewer(user["id"], user.get("email")))
 
 
 @app.route("/nguoi-xem/chuyen-di/<int:trip_id>")
@@ -398,7 +399,7 @@ def viewer_trip(trip_id):
     user = session["user"]
     if user["role"] != "viewer":
         return redirect(url_for("trips"))
-    trip = TripModel.get_for_viewer(trip_id, user["id"])
+    trip = TripModel.get_for_viewer(trip_id, user["id"], user.get("email"))
     if not trip:
         return "Không có quyền xem", 403
     members = FinanceModel.members(trip_id)

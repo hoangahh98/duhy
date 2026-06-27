@@ -211,7 +211,11 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold">Nội dung</label>
-                            <input class="form-control" name="title" placeholder="Ăn uống, tiền phòng..." required>
+                            <select class="form-select" name="title" id="expenseCategory" required>
+                                {% for category in expense_categories %}
+                                <option value="{{ category }}">{{ category }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Số tiền</label>
@@ -221,7 +225,7 @@
                             <button class="btn btn-success" data-loading-text="Đang thêm...">Thêm</button>
                         </div>
                         <div class="col-12">
-                            <input class="form-control" name="note" placeholder="Ghi chú khoản chi">
+                            <input class="form-control" name="note" id="expenseNote" placeholder="Ghi chú khoản chi">
                         </div>
                     </form>
                     <div class="small text-muted">Khi thêm mới, hệ thống tự chia đều cho tất cả thành viên trong chuyến đi.</div>
@@ -229,6 +233,28 @@
             </div>
         </div>
     </div>
+
+    <section class="card mb-3" id="travelSuggestionCard">
+        <div class="card-hdr blue">
+            <span>Gợi ý quanh khách sạn</span>
+            <span class="small fw-normal">Ăn uống, cà phê, vui chơi, khám phá</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-lg-8">
+                    <label class="form-label small fw-semibold">Khách sạn / địa chỉ</label>
+                    <input class="form-control" id="hotelSuggestionInput" placeholder="Nhập tên khách sạn và địa chỉ để nhận gợi ý">
+                </div>
+                <div class="col-lg-4 d-grid">
+                    <button class="btn btn-primary" type="button" id="buildSuggestionLinks" data-feedback="off">Tạo gợi ý</button>
+                </div>
+            </div>
+            <div class="small text-muted mt-2">
+                Các nút bên dưới mở nguồn công khai như Google Maps, Google Search và TikTok để xem đánh giá mới nhất. Muốn tự động fill địa chỉ, giờ mở cửa và điểm đánh giá vào đây thì cần cấu hình thêm API tìm kiếm/địa điểm hợp lệ trên Render.
+            </div>
+            <div class="row g-2 mt-2" id="suggestionLinks"></div>
+        </div>
+    </section>
 
     <section class="card mb-3">
         <div class="card-body p-0">
@@ -248,7 +274,11 @@
                         <tr>
                             <td class="sticky-col">
                                 <form id="expense-form-{{ row[0] }}" action="/chuyen-di/{{ trip[0] }}/chi/{{ row[0] }}" method="POST"></form>
-                                <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm mb-1 fw-semibold" name="title" value="{{ row[2] }}" required>
+                                <select form="expense-form-{{ row[0] }}" class="form-select form-select-sm mb-1 fw-semibold" name="title" required>
+                                    {% for category in expense_categories %}
+                                    <option value="{{ category }}" {% if row[2] == category or (row[2] not in expense_categories and category == 'Khác') %}selected{% endif %}>{{ category }}</option>
+                                    {% endfor %}
+                                </select>
                                 <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm mb-1" type="date" name="spent_date" value="{{ row[1] }}">
                                 <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm" name="note" value="{{ row[4] }}" placeholder="Ghi chú">
                             </td>
@@ -351,6 +381,73 @@ function copyMemberEmails(button) {
     }).catch(function() {
         document.execCommand('copy');
     });
+}
+
+const expenseCategory = document.getElementById('expenseCategory');
+const expenseNote = document.getElementById('expenseNote');
+const hotelSuggestionInput = document.getElementById('hotelSuggestionInput');
+const suggestionLinks = document.getElementById('suggestionLinks');
+const suggestionButton = document.getElementById('buildSuggestionLinks');
+
+function updateExpenseNotePlaceholder() {
+    if (!expenseCategory || !expenseNote) return;
+    if (expenseCategory.value === 'Khách sạn') {
+        expenseNote.placeholder = 'Ghi rõ tên khách sạn và địa chỉ để nhận gợi ý';
+        if (hotelSuggestionInput && !hotelSuggestionInput.value.trim()) {
+            hotelSuggestionInput.value = expenseNote.value.trim();
+        }
+    } else {
+        expenseNote.placeholder = 'Ghi chú khoản chi';
+    }
+}
+
+function buildSuggestionSearchLinks() {
+    if (!hotelSuggestionInput || !suggestionLinks) return;
+    const hotel = hotelSuggestionInput.value.trim() || (expenseNote ? expenseNote.value.trim() : '');
+    suggestionLinks.innerHTML = '';
+    if (!hotel) {
+        suggestionLinks.innerHTML = '<div class="col-12"><div class="alert alert-warning py-2 mb-0">Nhập tên khách sạn và địa chỉ trước khi tạo gợi ý.</div></div>';
+        return;
+    }
+
+    const groups = [
+        ['Quán ăn ngon', `quán ăn ngon gần ${hotel}`],
+        ['Cà phê đẹp', `cà phê đẹp gần ${hotel}`],
+        ['Vui chơi', `địa điểm vui chơi gần ${hotel}`],
+        ['Khám phá', `địa điểm khám phá gần ${hotel}`],
+        ['Thể thao', `thể thao giải trí gần ${hotel}`],
+    ];
+    const sources = [
+        ['Google Maps', (query) => `https://www.google.com/maps/search/${encodeURIComponent(query)}`],
+        ['Google', (query) => `https://www.google.com/search?q=${encodeURIComponent(query + ' đánh giá giờ mở cửa địa chỉ')}`],
+        ['TikTok', (query) => `https://www.tiktok.com/search?q=${encodeURIComponent(query)}`],
+    ];
+
+    suggestionLinks.innerHTML = groups.map(([label, query]) => `
+        <div class="col-md-6 col-xl-4">
+            <div class="border rounded p-2 h-100 bg-light">
+                <div class="fw-semibold mb-2">${label}</div>
+                <div class="d-flex flex-wrap gap-1">
+                    ${sources.map(([source, toUrl]) => `<a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="${toUrl(query)}">${source}</a>`).join('')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+if (expenseCategory) {
+    expenseCategory.addEventListener('change', updateExpenseNotePlaceholder);
+    updateExpenseNotePlaceholder();
+}
+if (expenseNote && hotelSuggestionInput) {
+    expenseNote.addEventListener('input', function() {
+        if (expenseCategory && expenseCategory.value === 'Khách sạn') {
+            hotelSuggestionInput.value = expenseNote.value;
+        }
+    });
+}
+if (suggestionButton) {
+    suggestionButton.addEventListener('click', buildSuggestionSearchLinks);
 }
 </script>
 {% endblock %}

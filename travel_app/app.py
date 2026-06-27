@@ -11,6 +11,8 @@ from .schema import init_schema
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
+EXPENSE_CATEGORIES = ("Khách sạn", "Ẩm thực", "Vui chơi", "Thể thao", "Khám phá", "Khác")
+
 with app.app_context():
     init_schema()
 
@@ -219,6 +221,7 @@ def trip_detail(trip_id):
         owner_admin=UserModel.get_admin_by_id(trip[3]) if trip[3] else None,
         permissions=TripModel.permissions(trip_id),
         can_manage_permissions=is_super_admin(user) or trip[3] == user["id"],
+        expense_categories=EXPENSE_CATEGORIES,
     )
 
 
@@ -294,11 +297,15 @@ def add_expense(trip_id):
     if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
         return "Không có quyền", 403
     members = FinanceModel.members(trip_id)
+    title = request.form.get("title", "").strip()
+    if title not in EXPENSE_CATEGORIES:
+        flash("Nội dung khoản chi không hợp lệ.", "danger")
+        return redirect(url_for("trip_detail", trip_id=trip_id))
     try:
         FinanceModel.add_expense(
             trip_id,
             request.form.get("spent_date") or date.today().isoformat(),
-            request.form.get("title", "").strip(),
+            title,
             request.form.get("amount"),
             request.form.get("note", ""),
             [member[0] for member in members],
@@ -319,10 +326,14 @@ def update_expense(trip_id, expense_id):
         {"member_id": member[0], "amount": request.form.get(f"split_{expense_id}_{member[0]}")}
         for member in members
     ]
+    title = request.form.get("title", "").strip()
+    if title not in EXPENSE_CATEGORIES:
+        flash("Nội dung khoản chi không hợp lệ.", "danger")
+        return redirect(url_for("trip_detail", trip_id=trip_id))
     try:
         FinanceModel.update_expense_splits(
             expense_id,
-            request.form.get("title", "").strip(),
+            title,
             request.form.get("spent_date") or date.today().isoformat(),
             request.form.get("amount"),
             request.form.get("note", ""),

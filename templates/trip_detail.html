@@ -52,17 +52,23 @@
                 <div class="card-body">
                     <form action="/chuyen-di/{{ trip[0] }}/thanh-vien" method="POST" class="vstack gap-2" id="addMemberForm">
                         <div>
-                            <label class="form-label small fw-semibold">Tên người đi</label>
-                            <input class="form-control" name="name" placeholder="Nguyễn Văn A" required>
+                            <label class="form-label small fw-semibold">Chọn thành viên</label>
+                            <select class="form-select" name="person_id" required>
+                                <option value="">Chọn thành viên</option>
+                                {% for person in available_people %}
+                                <option value="{{ person[0] }}">{{ person[1] }}{% if person[2] %} - {{ person[2] }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div>
-                            <label class="form-label small fw-semibold">Email người xem</label>
-                            <input class="form-control" name="email" type="email" placeholder="email@example.com">
+                        {% if not available_people %}
+                        <div class="alert alert-warning py-2 mb-0 small">
+                            Chưa còn thành viên nào để thêm. Vào menu <a href="/thanh-vien">Thành viên</a> để tạo trước.
                         </div>
+                        {% endif %}
                         <div class="alert alert-info py-2 mb-0 small">
                             Khi thêm thành viên mới, hệ thống tự chia đều lại toàn bộ khoản chi cho mọi người.
                         </div>
-                        <button class="btn btn-success fw-bold" data-loading-text="Đang thêm...">Thêm vào chuyến đi</button>
+                        <button class="btn btn-success fw-bold" data-loading-text="Đang thêm..." {% if not available_people %}disabled{% endif %}>Thêm vào chuyến đi</button>
                     </form>
                 </div>
             </div>

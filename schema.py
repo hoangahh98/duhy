@@ -34,9 +34,21 @@ def init_schema():
                 UNIQUE (trip_id, admin_id)
             );
 
+            CREATE TABLE IF NOT EXISTS travel_people (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL DEFAULT '',
+                user_id INTEGER REFERENCES travel_users(id) ON DELETE SET NULL,
+                owner_admin_id INTEGER REFERENCES travel_users(id) ON DELETE SET NULL,
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS trip_members (
                 id SERIAL PRIMARY KEY,
                 trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+                person_id INTEGER REFERENCES travel_people(id) ON DELETE SET NULL,
                 user_id INTEGER REFERENCES travel_users(id) ON DELETE SET NULL,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL DEFAULT '',
@@ -72,6 +84,37 @@ def init_schema():
                 amount NUMERIC(14, 0) NOT NULL DEFAULT 0 CHECK (amount >= 0),
                 UNIQUE (expense_id, member_id)
             );
+            """
+        )
+        cursor.execute("ALTER TABLE trip_members ADD COLUMN IF NOT EXISTS person_id INTEGER REFERENCES travel_people(id) ON DELETE SET NULL;")
+        cursor.execute(
+            """
+            INSERT INTO travel_people (name, email, user_id, owner_admin_id)
+            SELECT DISTINCT ON (lower(trim(tm.name)), lower(trim(tm.email)))
+                   tm.name, COALESCE(tm.email, ''), tm.user_id, t.owner_admin_id
+            FROM trip_members tm
+            INNER JOIN trips t ON tm.trip_id = t.id
+            WHERE tm.active = TRUE
+              AND tm.person_id IS NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM travel_people p
+                  WHERE lower(trim(p.name)) = lower(trim(tm.name))
+                    AND lower(trim(p.email)) = lower(trim(COALESCE(tm.email, '')))
+                    AND p.active = TRUE
+              )
+            ORDER BY lower(trim(tm.name)), lower(trim(tm.email)), tm.id;
+            """
+        )
+        cursor.execute(
+            """
+            UPDATE trip_members tm
+            SET person_id = p.id
+            FROM travel_people p
+            WHERE tm.person_id IS NULL
+              AND lower(trim(p.name)) = lower(trim(tm.name))
+              AND lower(trim(p.email)) = lower(trim(COALESCE(tm.email, '')))
+              AND p.active = TRUE;
             """
         )
         cursor.execute(

@@ -5,7 +5,7 @@ from flask import Flask, flash, redirect, render_template, request, send_from_di
 
 from auth import AuthService, admin_required, login_required
 from config import APP_NAME, FLASK_SECRET_KEY, SUPER_ADMIN_EMAIL
-from models import FinanceModel, TripModel, UserModel, admin_scope_id, build_summary, is_super_admin, money
+from models import FinanceModel, PeopleModel, TripModel, UserModel, admin_scope_id, build_summary, is_super_admin, money
 from schema import init_schema
 
 app = Flask(__name__)
@@ -65,6 +65,51 @@ def trips():
         user=user,
         super_admin_email=SUPER_ADMIN_EMAIL,
     )
+
+
+@app.route("/thanh-vien")
+@admin_required
+def people_list():
+    user = session["user"]
+    return render_template("people.html", people=PeopleModel.all_for_admin(admin_scope_id(user)), user=user)
+
+
+@app.route("/thanh-vien/them", methods=["POST"])
+@admin_required
+def add_person():
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Tên thành viên là bắt buộc.", "danger")
+        return redirect(url_for("people_list"))
+    PeopleModel.create(name, request.form.get("email", ""), session["user"]["id"])
+    flash("Đã thêm thành viên.", "success")
+    return redirect(url_for("people_list"))
+
+
+@app.route("/thanh-vien/<int:person_id>/sua", methods=["POST"])
+@admin_required
+def edit_person(person_id):
+    person = PeopleModel.get_for_admin(person_id, admin_scope_id(session["user"]))
+    if not person:
+        return "Không có quyền sửa thành viên này", 403
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Tên thành viên là bắt buộc.", "danger")
+        return redirect(url_for("people_list"))
+    PeopleModel.update(person_id, name, request.form.get("email", ""))
+    flash("Đã cập nhật thành viên.", "success")
+    return redirect(url_for("people_list"))
+
+
+@app.route("/thanh-vien/<int:person_id>/xoa", methods=["POST"])
+@admin_required
+def delete_person(person_id):
+    person = PeopleModel.get_for_admin(person_id, admin_scope_id(session["user"]))
+    if not person:
+        return "Không có quyền xóa thành viên này", 403
+    PeopleModel.delete(person_id)
+    flash("Đã xóa thành viên khỏi danh bạ.", "success")
+    return redirect(url_for("people_list"))
 
 
 @app.route("/admin-settings")
@@ -176,6 +221,7 @@ def trip_detail(trip_id):
         expenses=expenses,
         summary=build_summary(members, expenses),
         today=date.today().isoformat(),
+        available_people=PeopleModel.available_for_trip(trip_id, admin_scope_id(user)),
         admins=UserModel.get_available_admins_for_trip(trip_id, trip[3], user["id"]),
         owner_admin=UserModel.get_admin_by_id(trip[3]) if trip[3] else None,
         permissions=TripModel.permissions(trip_id),
@@ -188,11 +234,14 @@ def trip_detail(trip_id):
 def add_member(trip_id):
     if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
         return "Không có quyền", 403
-    name = (request.form.get("name") or "").strip()
-    if not name:
-        flash("Tên thành viên là bắt buộc.", "danger")
+    person_id = request.form.get("person_id")
+    if not person_id:
+        flash("Bạn cần chọn thành viên.", "danger")
         return redirect(url_for("trip_detail", trip_id=trip_id))
-    FinanceModel.add_member(trip_id, name, request.form.get("email", ""))
+    person = PeopleModel.get_for_admin(person_id, admin_scope_id(session["user"]))
+    if not person:
+        return "Không có quyền chọn thành viên này", 403
+    FinanceModel.add_member_from_person(trip_id, person_id)
     FinanceModel.rebalance_expenses_equal(trip_id)
     flash("Đã thêm thành viên và chia đều lại toàn bộ khoản chi.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))

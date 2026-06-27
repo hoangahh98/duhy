@@ -135,6 +135,129 @@ class UserModel:
             return user_id
 
 
+class PeopleModel:
+    @staticmethod
+    def all_for_admin(admin_id=None):
+        with db_cursor() as cursor:
+            if admin_id:
+                cursor.execute(
+                    """
+                    SELECT id, name, email, user_id, owner_admin_id
+                    FROM travel_people
+                    WHERE active = TRUE AND owner_admin_id = %s
+                    ORDER BY name ASC, id ASC;
+                    """,
+                    (admin_id,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, name, email, user_id, owner_admin_id
+                    FROM travel_people
+                    WHERE active = TRUE
+                    ORDER BY name ASC, id ASC;
+                    """
+                )
+            return cursor.fetchall()
+
+    @staticmethod
+    def available_for_trip(trip_id, admin_id=None):
+        with db_cursor() as cursor:
+            if admin_id:
+                cursor.execute(
+                    """
+                    SELECT p.id, p.name, p.email
+                    FROM travel_people p
+                    WHERE p.active = TRUE
+                      AND p.owner_admin_id = %s
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM trip_members tm
+                          WHERE tm.trip_id = %s AND tm.person_id = p.id AND tm.active = TRUE
+                      )
+                    ORDER BY p.name ASC, p.id ASC;
+                    """,
+                    (admin_id, trip_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT p.id, p.name, p.email
+                    FROM travel_people p
+                    WHERE p.active = TRUE
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM trip_members tm
+                          WHERE tm.trip_id = %s AND tm.person_id = p.id AND tm.active = TRUE
+                      )
+                    ORDER BY p.name ASC, p.id ASC;
+                    """,
+                    (trip_id,),
+                )
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_for_admin(person_id, admin_id=None):
+        with db_cursor() as cursor:
+            if admin_id:
+                cursor.execute(
+                    """
+                    SELECT id, name, email, user_id, owner_admin_id
+                    FROM travel_people
+                    WHERE id = %s AND active = TRUE AND owner_admin_id = %s;
+                    """,
+                    (person_id, admin_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, name, email, user_id, owner_admin_id
+                    FROM travel_people
+                    WHERE id = %s AND active = TRUE;
+                    """,
+                    (person_id,),
+                )
+            return cursor.fetchone()
+
+    @staticmethod
+    def create(name, email, owner_admin_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO travel_people (name, email, owner_admin_id)
+                VALUES (%s, %s, %s)
+                RETURNING id;
+                """,
+                (name, (email or "").strip().lower(), owner_admin_id),
+            )
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def update(person_id, name, email):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                UPDATE travel_people
+                SET name = %s, email = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+                """,
+                (name, (email or "").strip().lower(), person_id),
+            )
+            cursor.execute(
+                """
+                UPDATE trip_members
+                SET name = %s, email = %s
+                WHERE person_id = %s AND active = TRUE;
+                """,
+                (name, (email or "").strip().lower(), person_id),
+            )
+
+    @staticmethod
+    def delete(person_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("UPDATE travel_people SET active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s;", (person_id,))
+
+
 class TripModel:
     @staticmethod
     def all_for_admin(admin_id=None):
@@ -345,6 +468,35 @@ class FinanceModel:
             cursor.execute(
                 "INSERT INTO trip_members (trip_id, name, email) VALUES (%s, %s, %s) RETURNING id;",
                 (trip_id, name, (email or "").strip().lower()),
+            )
+            member_id = cursor.fetchone()[0]
+            cursor.execute(
+                "INSERT INTO trip_collections (trip_id, member_id, amount) VALUES (%s, %s, 0) ON CONFLICT DO NOTHING;",
+                (trip_id, member_id),
+            )
+            return member_id
+
+    @staticmethod
+    def add_member_from_person(trip_id, person_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                SELECT id, name, email, user_id
+                FROM travel_people
+                WHERE id = %s AND active = TRUE;
+                """,
+                (person_id,),
+            )
+            person = cursor.fetchone()
+            if not person:
+                raise ValueError("Không tìm thấy thành viên")
+            cursor.execute(
+                """
+                INSERT INTO trip_members (trip_id, person_id, user_id, name, email)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id;
+                """,
+                (trip_id, person[0], person[3], person[1], person[2] or ""),
             )
             member_id = cursor.fetchone()[0]
             cursor.execute(

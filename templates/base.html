@@ -14,15 +14,20 @@
     <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark mb-0 py-2">
+    <nav class="navbar navbar-light bg-white border-bottom shadow-sm mb-0 py-2">
         <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold" href="/">🏖️ Thu chi du lịch</a>
+            <a class="navbar-brand fw-bold text-success" href="/">🏖️ Thu chi du lịch</a>
             <div class="d-flex gap-2 align-items-center flex-wrap">
                 {% if session.get('user') %}
                     {% if session.user.role == 'admin' %}
-                        <a class="btn btn-sm btn-outline-light" href="/chuyen-di">Chuyến đi</a>
+                        {% if request.path.startswith('/chuyen-di/') %}
+                            <a class="btn btn-sm btn-outline-success" href="/chuyen-di">Trang chủ</a>
+                        {% endif %}
+                        {% if session.user.email == super_admin_email %}
+                            <a class="btn btn-sm btn-outline-primary" href="/admin-settings">Quản lý admin</a>
+                        {% endif %}
                     {% else %}
-                        <a class="btn btn-sm btn-outline-light" href="/nguoi-xem">Chuyến đi của tôi</a>
+                        <a class="btn btn-sm btn-outline-success" href="/nguoi-xem">Chuyến đi của tôi</a>
                     {% endif %}
                     <span class="navbar-text d-none d-md-inline">{{ session.user.display_name }} · {{ 'Admin' if session.user.role == 'admin' else 'Người xem' }}</span>
                     <a class="btn btn-sm btn-outline-danger" href="/dang-xuat">Đăng xuất</a>

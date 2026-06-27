@@ -15,6 +15,11 @@ with app.app_context():
     init_schema()
 
 
+@app.context_processor
+def inject_template_globals():
+    return {"super_admin_email": SUPER_ADMIN_EMAIL}
+
+
 @app.template_filter("vnd")
 def vnd(value):
     return f"{money(value):,.0f}".replace(",", ".")

@@ -34,7 +34,7 @@ body {
 
 .card-hdr.blue { background: #0d6efd; }
 .card-hdr.green { background: #198754; }
-.card-hdr.dark { background: #212529; }
+.card-hdr.dark { background: #e9f7ef; color: #146c43; }
 .card-hdr.warn { background: #ffc107; color: #212529; }
 
 .login-panel {
@@ -125,7 +125,13 @@ body {
 }
 
 .expense-table thead .sticky-col {
-    background: #f8fafc;
+    background: #d1e7dd;
+}
+
+.expense-table thead th {
+    background: #d1e7dd !important;
+    color: #0f5132 !important;
+    border-color: #a3cfbb !important;
 }
 
 .expense-actions {

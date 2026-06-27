@@ -11,9 +11,6 @@
                     💰 Còn lại {{ summary.balance|vnd }}đ
                 </div>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="/chuyen-di" class="btn btn-sm btn-outline-light bg-dark">⬅️ Chuyến đi</a>
-            </div>
         </div>
     </div>
 
@@ -135,7 +132,7 @@
         </div>
         <div class="col-lg-7">
             <div class="card h-100">
-                <div class="card-hdr dark">
+                <div class="card-hdr green">
                     <span>Thêm khoản chi</span>
                     <span>{{ summary.total_spent|vnd }}đ</span>
                 </div>
@@ -167,19 +164,15 @@
     </div>
 
     <section class="card mb-3">
-        <div class="card-hdr green">
-            <span>Bảng chia chi</span>
-            <span>{{ summary.total_spent|vnd }}đ</span>
-        </div>
         <div class="card-body p-0">
             <div class="table-responsive expense-table-wrap">
                 <table class="table table-bordered align-middle expense-table mb-0">
-                    <thead class="table-dark">
+                    <thead class="table-success">
                         <tr>
-                            <th class="sticky-col">Khoản chi</th>
+                            <th class="sticky-col">Chi tiêu</th>
                             {% for member in members %}<th>{{ member[1] }}</th>{% endfor %}
                             <th>Tổng chi</th>
-                            <th></th>
+                            <th>{{ summary.total_spent|vnd }}đ</th>
                         </tr>
                     </thead>
                     <tbody>

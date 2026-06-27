@@ -10,11 +10,11 @@
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">🏸 PICKLEBALL MANAGER</span>
+            <span class="navbar-brand mb-0 h1">Vô địch Tool</span>
             <div>
                 <a href="/" class="btn btn-sm btn-outline-light me-2">🏠 Trang chủ</a>
                 <a href="/van-dong-vien?return_to=/giai-dau" class="btn btn-sm btn-outline-info me-2">👥 Vận động viên</a>
-                <span class="navbar-text text-white-50 small me-2">{{ session.user.display_name or session.user.email }}</span>
+                <span class="navbar-text text-white-50 small me-2">{{ session.user.display_name or session.user.email }} · {{ 'Admin' if session.user.role == 'admin' else ('Client' if session.user.role == 'vdv' else 'Người xem') }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">🚪 Đăng xuất</a>
             </div>
         </div>
@@ -108,5 +108,4 @@
 {% include '_interaction_feedback.html' %}
 </body>
 </html>
-
 

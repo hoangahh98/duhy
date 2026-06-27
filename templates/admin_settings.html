@@ -13,7 +13,7 @@
             <span class="navbar-brand mb-0 h1">Quản lý tài khoản admin</span>
             <div>
                 <a href="/" class="btn btn-sm btn-outline-light">Trang chủ</a>
-                <span class="navbar-text text-white-50 small mx-2">{{ session.user.display_name or session.user.email }}</span>
+                <span class="navbar-text text-white-50 small mx-2">{{ session.user.display_name or session.user.email }} · {{ 'Admin' if session.user.role == 'admin' else ('Client' if session.user.role == 'vdv' else 'Người xem') }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
             </div>
         </div>
@@ -45,6 +45,7 @@
                                     <tr>
                                         <th style="width:80px">ID</th>
                                         <th>User admin</th>
+                                        <th>Tên admin</th>
                                         <th style="width:340px">Đổi mật khẩu</th>
                                         <th style="width:170px">Thao tác</th>
                                     </tr>
@@ -61,6 +62,9 @@
                                             {% if is_root %}
                                             <div class="small text-muted mt-1">Admin gốc, không thể xóa.</div>
                                             {% endif %}
+                                        </td>
+                                        <td>
+                                            <input form="editAdmin{{ admin[0] }}" type="text" class="form-control form-control-sm" name="display_name" value="{{ admin[2] or admin[1] }}" required>
                                         </td>
                                         <td>
                                             <div class="row g-2">
@@ -100,6 +104,10 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">User admin</label>
                                 <input type="text" class="form-control" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tên admin</label>
+                                <input type="text" class="form-control" name="display_name" placeholder="Ví dụ: Super Admin" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Mật khẩu</label>

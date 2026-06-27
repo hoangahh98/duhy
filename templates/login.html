@@ -3,24 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập</title>
+    <title>Đăng nhập - Vô địch Tool</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; }
-        .login-card { border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-        .btn-admin { background: linear-gradient(90deg, #667eea, #764ba2); border: none; }
-        .btn-admin:hover { background: linear-gradient(90deg, #764ba2, #667eea); color: white; }
+        body { background: #eef2f7; min-height: 100vh; display: flex; align-items: center; }
+        .login-card { border: 0; border-radius: 10px; box-shadow: 0 14px 34px rgba(15,23,42,.16); }
+        .brand-icon { font-size: 3rem; line-height: 1; }
+        .btn-admin { background: linear-gradient(90deg, #0f172a, #14532d); border: none; }
+        .btn-admin:hover { background: linear-gradient(90deg, #14532d, #0f172a); color: white; }
     </style>
     {% include '_pwa_head.html' %}
 </head>
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-5">
+            <div class="col-md-5 col-lg-4">
                 <div class="card login-card">
                     <div class="card-body p-5">
-                        <h1 class="text-center mb-4">🏸 PICKLEBALL</h1>
-                        <h5 class="text-center mb-4 text-muted">Tournament Manager</h5>
+                        <div class="text-center mb-4">
+                            <div class="brand-icon" aria-hidden="true">🐆</div>
+                            <h1 class="fw-bold mb-0">Vô địch Tool</h1>
+                        </div>
 
                         {% if error %}
                         <div class="alert alert-danger">❌ {{ error }}</div>
@@ -28,27 +31,27 @@
 
                         <form method="POST">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">📧 User/Email <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">User/Email <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control form-control-lg" name="email" required autofocus>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">🔐 Mật Khẩu <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">Mật khẩu <span class="text-danger">*</span></label>
                                 <input type="password" class="form-control form-control-lg" name="password" required>
-                                <small class="text-muted">VĐV: 123456789</small>
+                                <small class="text-muted">Client mặc định: 123456789</small>
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label fw-bold">👤 Vai Trò <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">Vai trò <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-lg" name="role" required>
-                                    <option value="vdv">🏃 Vận Động Viên</option>
-                                    <option value="admin">👨‍💼 Admin</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="vdv">Client</option>
                                 </select>
                             </div>
 
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-admin btn-lg fw-bold text-white">
-                                    🔓 ĐĂNG NHẬP
+                                    Đăng nhập
                                 </button>
                             </div>
                         </form>

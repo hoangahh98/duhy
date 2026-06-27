@@ -130,10 +130,10 @@ class AdminUserModel:
     def get_all():
         with db_cursor() as cursor:
             cursor.execute("""
-                SELECT id, email
+                SELECT id, email, COALESCE(NULLIF(display_name, ''), email) AS display_name
                 FROM users
                 WHERE role = 'admin'
-                ORDER BY email ASC;
+                ORDER BY display_name ASC, email ASC;
             """)
             return cursor.fetchall()
 
@@ -141,7 +141,7 @@ class AdminUserModel:
     def get_by_id(admin_id):
         with db_cursor() as cursor:
             cursor.execute("""
-                SELECT id, email
+                SELECT id, email, COALESCE(NULLIF(display_name, ''), email) AS display_name
                 FROM users
                 WHERE id = %s AND role = 'admin';
             """, (admin_id,))
@@ -151,7 +151,7 @@ class AdminUserModel:
     def get_available_for_tournament(giai_id, owner_admin_id=None, current_admin_id=None):
         with db_cursor() as cursor:
             cursor.execute("""
-                SELECT u.id, u.email
+                SELECT u.id, u.email, COALESCE(NULLIF(u.display_name, ''), u.email) AS display_name
                 FROM users u
                 WHERE u.role = 'admin'
                   AND lower(u.email) <> lower(%s)
@@ -163,7 +163,7 @@ class AdminUserModel:
                       WHERE q.giai_dau_id = %s
                         AND q.admin_id = u.id
                   )
-                ORDER BY u.email ASC;
+                ORDER BY display_name ASC, u.email ASC;
             """, (SUPER_ADMIN_EMAIL, owner_admin_id, owner_admin_id, current_admin_id, current_admin_id, giai_id))
             return cursor.fetchall()
 
@@ -171,7 +171,7 @@ class AdminUserModel:
     def get_available_for_team(doi_bong_id, owner_admin_id=None, current_admin_id=None):
         with db_cursor() as cursor:
             cursor.execute("""
-                SELECT u.id, u.email
+                SELECT u.id, u.email, COALESCE(NULLIF(u.display_name, ''), u.email) AS display_name
                 FROM users u
                 WHERE u.role = 'admin'
                   AND lower(u.email) <> lower(%s)
@@ -183,7 +183,7 @@ class AdminUserModel:
                       WHERE q.doi_bong_id = %s
                         AND q.admin_id = u.id
                   )
-                ORDER BY u.email ASC;
+                ORDER BY display_name ASC, u.email ASC;
             """, (SUPER_ADMIN_EMAIL, owner_admin_id, owner_admin_id, current_admin_id, current_admin_id, doi_bong_id))
             return cursor.fetchall()
 
@@ -203,21 +203,22 @@ class AdminUserModel:
             return cursor.fetchone() is not None
 
     @staticmethod
-    def update(admin_id, email, password_hash=None):
+    def update(admin_id, email, display_name, password_hash=None):
         email = normalize_admin_user(email)
+        display_name = (display_name or email).strip()
         with db_cursor(commit=True) as cursor:
             if password_hash:
                 cursor.execute("""
                     UPDATE users
-                    SET email = %s, password = %s
+                    SET email = %s, display_name = %s, password = %s
                     WHERE id = %s AND role = 'admin';
-                """, (email.strip().lower(), password_hash, admin_id))
+                """, (email.strip().lower(), display_name, password_hash, admin_id))
             else:
                 cursor.execute("""
                     UPDATE users
-                    SET email = %s
+                    SET email = %s, display_name = %s
                     WHERE id = %s AND role = 'admin';
-                """, (email.strip().lower(), admin_id))
+                """, (email.strip().lower(), display_name, admin_id))
 
     @staticmethod
     def delete(admin_id, fallback_admin_id):

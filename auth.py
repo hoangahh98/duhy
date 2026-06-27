@@ -26,7 +26,7 @@ class AuthService:
         login_name = normalize_admin_user(email)
         with db_cursor() as cursor:
             cursor.execute("""
-                SELECT id, email, password
+                SELECT id, email, password, display_name
                 FROM users
                 WHERE role = 'admin'
                   AND (
@@ -43,12 +43,14 @@ class AuthService:
             return None, "Mật khẩu sai"
 
         email = normalize_admin_user(user[1])
-        return {"id": user[0], "email": email, "role": "admin", "display_name": email}, None
+        display_name = user[3] or ("Super Admin" if email == "admin" else email)
+        return {"id": user[0], "email": email, "role": "admin", "display_name": display_name}, None
 
     @staticmethod
-    def register_admin(email, password):
+    def register_admin(email, password, display_name=None):
         """Tạo tài khoản admin (chỉ cấu hình lần đầu)"""
         admin_user = normalize_admin_user(email)
+        display_name = (display_name or admin_user).strip()
         try:
             with db_cursor(commit=True) as cursor:
                 cursor.execute("SELECT id FROM users WHERE role = 'admin' AND lower(email) = lower(%s);", (admin_user,))
@@ -57,8 +59,8 @@ class AuthService:
 
                 hashed = AuthService.hash_password(password)
                 cursor.execute("""
-                    INSERT INTO users (email, password, role) VALUES (%s, %s, %s);
-                """, (admin_user, hashed, "admin"))
+                    INSERT INTO users (email, password, role, display_name) VALUES (%s, %s, %s, %s);
+                """, (admin_user, hashed, "admin", display_name))
             return True, "Tạo admin thành công"
         except Exception as e:
             return False, str(e)

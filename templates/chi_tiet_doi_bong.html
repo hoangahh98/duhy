@@ -30,7 +30,7 @@
                 {% else %}
                 <a href="/vdv-dashboard" class="btn btn-sm btn-outline-light">Quay lại</a>
                 {% endif %}
-                <span class="navbar-text text-white-50 small">{{ session.user.display_name or session.user.email }}</span>
+                <span class="navbar-text text-white-50 small">{{ session.user.display_name or session.user.email }} · {{ 'Admin' if session.user.role == 'admin' else ('Client' if session.user.role == 'vdv' else 'Người xem') }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
             </div>
         </div>

@@ -93,8 +93,20 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'admin',
+    display_name VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS display_name VARCHAR(255) NOT NULL DEFAULT '';
+
+UPDATE users
+SET display_name = CASE
+    WHEN lower(email) = lower('admin') THEN 'Super Admin'
+    ELSE email
+END
+WHERE role = 'admin'
+  AND COALESCE(NULLIF(display_name, ''), '') = '';
 
 CREATE TABLE IF NOT EXISTS user_clients (
     id SERIAL PRIMARY KEY,

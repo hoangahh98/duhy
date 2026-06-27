@@ -25,7 +25,7 @@ class UserModel:
     def get_admins():
         with db_cursor() as cursor:
             cursor.execute(
-                "SELECT id, email, email AS display_name FROM users WHERE role = 'admin' ORDER BY email ASC;"
+                "SELECT id, email, COALESCE(NULLIF(display_name, ''), email) AS display_name FROM users WHERE role = 'admin' ORDER BY display_name ASC, email ASC;"
             )
             return cursor.fetchall()
 
@@ -34,7 +34,7 @@ class UserModel:
         with db_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT u.id, u.email, u.email AS display_name
+                SELECT u.id, u.email, COALESCE(NULLIF(u.display_name, ''), u.email) AS display_name
                 FROM users u
                 WHERE u.role = 'admin'
                   AND lower(u.email) <> lower(%s)
@@ -45,7 +45,7 @@ class UserModel:
                       FROM trip_admin_permissions p
                       WHERE p.trip_id = %s AND p.admin_id = u.id
                   )
-                ORDER BY u.email ASC;
+                ORDER BY display_name ASC, u.email ASC;
                 """,
                 (SUPER_ADMIN_EMAIL, owner_admin_id, owner_admin_id, current_admin_id, current_admin_id, trip_id),
             )
@@ -55,7 +55,7 @@ class UserModel:
     def get_admin(admin_id):
         with db_cursor() as cursor:
             cursor.execute(
-                "SELECT id, email, email AS display_name FROM users WHERE id = %s AND role = 'admin';",
+                "SELECT id, email, COALESCE(NULLIF(display_name, ''), email) AS display_name FROM users WHERE id = %s AND role = 'admin';",
                 (admin_id,),
             )
             return cursor.fetchone()
@@ -70,10 +70,10 @@ class UserModel:
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
-                INSERT INTO users (email, password, role)
-                VALUES (%s, %s, 'admin');
+                INSERT INTO users (email, password, role, display_name)
+                VALUES (%s, %s, 'admin', %s);
                 """,
-                (email, AuthService.hash_password(password)),
+                (email, AuthService.hash_password(password), display_name),
             )
 
     @staticmethod
@@ -84,19 +84,19 @@ class UserModel:
                 cursor.execute(
                     """
                     UPDATE users
-                    SET email = %s, password = %s
+                    SET email = %s, display_name = %s, password = %s
                     WHERE id = %s AND role = 'admin';
                     """,
-                    (email, AuthService.hash_password(password), admin_id),
+                    (email, display_name, AuthService.hash_password(password), admin_id),
                 )
             else:
                 cursor.execute(
                     """
                     UPDATE users
-                    SET email = %s
+                    SET email = %s, display_name = %s
                     WHERE id = %s AND role = 'admin';
                     """,
-                    (email, admin_id),
+                    (email, display_name, admin_id),
                 )
 
     @staticmethod

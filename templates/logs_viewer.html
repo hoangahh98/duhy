@@ -25,7 +25,7 @@
             <span class="navbar-brand mb-0 h1">📋 System Logs</span>
             <div>
                 <a href="/" class="btn btn-sm btn-outline-light">⬅️ Quay lại</a>
-                <span class="navbar-text text-white-50 small mx-2">{{ session.user.display_name or session.user.email }}</span>
+                <span class="navbar-text text-white-50 small mx-2">{{ session.user.display_name or session.user.email }} · {{ 'Admin' if session.user.role == 'admin' else ('Client' if session.user.role == 'vdv' else 'Người xem') }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">🚪 Đăng xuất</a>
             </div>
         </div>

@@ -43,6 +43,7 @@ with app.app_context():
     ensure_all_schema()
 
 from travel_app import app as travel_app
+from travel_app.models import TripModel as TravelTripModel
 
 
 @app.context_processor
@@ -1760,7 +1761,7 @@ def login():
         else:
             vdv = VanDongVienModel.get_by_email(email)
             if vdv and password == '123456789':
-                user = {"id": vdv[0], "ten": vdv[1], "email": vdv[2], "role": "vdv"}
+                user = {"id": vdv[0], "ten": vdv[1], "email": vdv[2], "role": "vdv", "display_name": vdv[1]}
                 error = None
             else:
                 user, error = None, "Email hoặc mật khẩu sai"
@@ -1824,6 +1825,7 @@ def tao_admin():
         if forbidden:
             return forbidden
         email = normalize_admin_user(request.form.get('email'))
+        display_name = (request.form.get('display_name') or '').strip() or email
         password = request.form.get('password')
         confirm = request.form.get('confirm_password')
 
@@ -1834,7 +1836,7 @@ def tao_admin():
         if len(password) < 6:
             return render_template('admin_settings.html', admins=AdminUserModel.get_all(), error="Password min 6 chars", super_admin_email=SUPER_ADMIN_EMAIL)
 
-        success, msg = AuthService.register_admin(email, password)
+        success, msg = AuthService.register_admin(email, password, display_name)
 
         if success:
             DBLogger.log_success(f"Admin created: {email}", user.get('email'), '/tao-admin')
@@ -1861,6 +1863,7 @@ def sua_admin(admin_id):
             return "Khong tim thay admin", 404
 
         email = normalize_admin_user(request.form.get('email'))
+        display_name = (request.form.get('display_name') or '').strip() or email
         password = request.form.get('password') or ''
         confirm = request.form.get('confirm_password') or ''
 
@@ -1875,12 +1878,13 @@ def sua_admin(admin_id):
                 return render_template('admin_settings.html', admins=AdminUserModel.get_all(), error="Passwords don't match", super_admin_email=SUPER_ADMIN_EMAIL), 400
             if len(password) < 6:
                 return render_template('admin_settings.html', admins=AdminUserModel.get_all(), error="Password min 6 chars", super_admin_email=SUPER_ADMIN_EMAIL), 400
-            AdminUserModel.update(admin_id, email, AuthService.hash_password(password))
+            AdminUserModel.update(admin_id, email, display_name, AuthService.hash_password(password))
         else:
-            AdminUserModel.update(admin_id, email)
+            AdminUserModel.update(admin_id, email, display_name)
 
         if admin_id == user.get('id'):
             session['user']['email'] = email
+            session['user']['display_name'] = display_name
         DBLogger.log_success(f"Admin updated: {email}", user.get('email'), f'/admin-settings/{admin_id}/sua')
         return redirect('/admin-settings?success=updated')
     except Exception as e:
@@ -1943,7 +1947,13 @@ def vdv_dashboard():
                 continue
 
         vdv_doi_bong = DoiBongModel.get_by_vdv(vdv_id)
-        return render_template('vdv_dashboard.html', vdv_giai=vdv_giai, vdv_doi_bong=vdv_doi_bong)
+        travel_trips = TravelTripModel.all_for_viewer(vdv_id, user.get('email'))
+        return render_template(
+            'vdv_dashboard.html',
+            vdv_giai=vdv_giai,
+            vdv_doi_bong=vdv_doi_bong,
+            travel_trips=travel_trips,
+        )
     except Exception as e:
         DBLogger.log_error(f"Error loading VĐV dashboard: {str(e)}", user.get('email'), '/vdv-dashboard', context=traceback.format_exc())
         return f"❌ Error: {str(e)}", 500

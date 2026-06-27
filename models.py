@@ -148,84 +148,46 @@ class PeopleModel:
     @staticmethod
     def all_for_admin(admin_id=None):
         with db_cursor() as cursor:
-            if admin_id:
-                cursor.execute(
-                    """
-                    SELECT id, name, email, user_id, owner_admin_id
-                    FROM travel_people
-                    WHERE active = TRUE AND owner_admin_id = %s
-                    ORDER BY name ASC, id ASC;
-                    """,
-                    (admin_id,),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, name, email, user_id, owner_admin_id
-                    FROM travel_people
-                    WHERE active = TRUE
-                    ORDER BY name ASC, id ASC;
-                    """
-                )
+            cursor.execute(
+                """
+                SELECT id, name, email, user_id, owner_admin_id
+                FROM travel_people
+                WHERE active = TRUE
+                ORDER BY name ASC, id ASC;
+                """
+            )
             return cursor.fetchall()
 
     @staticmethod
     def available_for_trip(trip_id, admin_id=None):
         with db_cursor() as cursor:
-            if admin_id:
-                cursor.execute(
-                    """
-                    SELECT p.id, p.name, p.email
-                    FROM travel_people p
-                    WHERE p.active = TRUE
-                      AND p.owner_admin_id = %s
-                      AND NOT EXISTS (
-                          SELECT 1
-                          FROM trip_members tm
-                          WHERE tm.trip_id = %s AND tm.person_id = p.id AND tm.active = TRUE
-                      )
-                    ORDER BY p.name ASC, p.id ASC;
-                    """,
-                    (admin_id, trip_id),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT p.id, p.name, p.email
-                    FROM travel_people p
-                    WHERE p.active = TRUE
-                      AND NOT EXISTS (
-                          SELECT 1
-                          FROM trip_members tm
-                          WHERE tm.trip_id = %s AND tm.person_id = p.id AND tm.active = TRUE
-                      )
-                    ORDER BY p.name ASC, p.id ASC;
-                    """,
-                    (trip_id,),
-                )
+            cursor.execute(
+                """
+                SELECT p.id, p.name, p.email
+                FROM travel_people p
+                WHERE p.active = TRUE
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM trip_members tm
+                      WHERE tm.trip_id = %s AND tm.person_id = p.id AND tm.active = TRUE
+                  )
+                ORDER BY p.name ASC, p.id ASC;
+                """,
+                (trip_id,),
+            )
             return cursor.fetchall()
 
     @staticmethod
     def get_for_admin(person_id, admin_id=None):
         with db_cursor() as cursor:
-            if admin_id:
-                cursor.execute(
-                    """
-                    SELECT id, name, email, user_id, owner_admin_id
-                    FROM travel_people
-                    WHERE id = %s AND active = TRUE AND owner_admin_id = %s;
-                    """,
-                    (person_id, admin_id),
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT id, name, email, user_id, owner_admin_id
-                    FROM travel_people
-                    WHERE id = %s AND active = TRUE;
-                    """,
-                    (person_id,),
-                )
+            cursor.execute(
+                """
+                SELECT id, name, email, user_id, owner_admin_id
+                FROM travel_people
+                WHERE id = %s AND active = TRUE;
+                """,
+                (person_id,),
+            )
             return cursor.fetchone()
 
     @staticmethod

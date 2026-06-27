@@ -91,6 +91,7 @@
                                     <td>{{ summary.member_spent[member[0]]|vnd }}đ</td>
                                     <td class="{% if summary.balances[member[0]] < 0 %}text-danger{% else %}text-success{% endif %} fw-bold">{{ summary.balances[member[0]]|vnd }}đ</td>
                                     <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editMemberModal{{ member[0] }}" data-feedback="off">✏️</button>
                                         <form class="d-inline" action="/chuyen-di/{{ trip[0] }}/thanh-vien/{{ member[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa thành viên này khỏi chuyến đi?')">
                                             <button class="btn btn-sm btn-danger py-0">🗑️</button>
                                         </form>
@@ -107,6 +108,43 @@
             </div>
         </div>
     </div>
+
+    {% for member in members %}
+    <div class="modal fade" id="editMemberModal{{ member[0] }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/chuyen-di/{{ trip[0] }}/thanh-vien/{{ member[0] }}/sua" method="POST">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title fw-bold">Sửa thành viên</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tên thành viên</label>
+                            <input class="form-control" name="name" value="{{ member[1] }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email người xem</label>
+                            <input class="form-control" name="email" type="email" value="{{ member[2] }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mật khẩu người xem</label>
+                            <input class="form-control" name="password" value="123456789">
+                        </div>
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="create_viewer" value="1" {% if member[3] %}checked{% endif %}>
+                            <span class="form-check-label">Tạo/cập nhật tài khoản người xem</span>
+                        </label>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-feedback="off">Hủy</button>
+                        <button class="btn btn-warning fw-bold" data-loading-text="Đang lưu...">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
     <div class="modal fade" id="memberEmailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">

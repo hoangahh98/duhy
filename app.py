@@ -209,6 +209,25 @@ def delete_member(trip_id, member_id):
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
+@app.route("/chuyen-di/<int:trip_id>/thanh-vien/<int:member_id>/sua", methods=["POST"])
+@admin_required
+def update_member(trip_id, member_id):
+    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+        return "Không có quyền", 403
+    member = FinanceModel.get_member_for_admin(member_id, admin_scope_id(session["user"]))
+    if not member or member[1] != trip_id:
+        return "Không tìm thấy thành viên", 404
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Tên thành viên là bắt buộc.", "danger")
+        return redirect(url_for("trip_detail", trip_id=trip_id))
+    FinanceModel.update_member(member_id, name, request.form.get("email", ""))
+    if request.form.get("create_viewer") and request.form.get("email"):
+        UserModel.create_viewer_for_member(member_id, request.form.get("email"), request.form.get("password") or "123456789")
+    flash("Đã cập nhật thông tin thành viên.", "success")
+    return redirect(url_for("trip_detail", trip_id=trip_id))
+
+
 @app.route("/chuyen-di/<int:trip_id>/thu", methods=["POST"])
 @admin_required
 def update_collections(trip_id):

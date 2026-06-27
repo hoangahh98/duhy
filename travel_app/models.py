@@ -34,7 +34,7 @@ class UserModel:
         with db_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT u.id, u.email, u.display_name
+                SELECT u.id, u.email, u.email AS display_name
                 FROM users u
                 WHERE u.role = 'admin'
                   AND lower(u.email) <> lower(%s)

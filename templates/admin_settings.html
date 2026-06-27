@@ -13,6 +13,7 @@
             <span class="navbar-brand mb-0 h1">Quản lý tài khoản admin</span>
             <div>
                 <a href="/" class="btn btn-sm btn-outline-light">Trang chủ</a>
+                <span class="navbar-text text-white-50 small mx-2">{{ session.user.display_name or session.user.email }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
             </div>
         </div>

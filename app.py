@@ -891,7 +891,7 @@ def chi_tiet_doi_bong(doi_bong_id):
     try:
         doi_bong = _get_team_for_admin_or_403(doi_bong_id, user)
         if not doi_bong:
-            return "KhÃ´ng tÃ¬m tháº¥y Ä‘á»™i bÃ³ng", 404
+            return "Không tìm thấy đội bóng", 404
 
         selected_month = request.args.get('thang') or _current_month()
         selected_month_date = DoiBongModel.normalize_month(selected_month)
@@ -935,7 +935,7 @@ def cap_nhat_quy_doi_bong(doi_bong_id):
     selected_month = request.form.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         form_data, errors = normalize_team_month_form(request.form)
         if not errors:
             DoiBongModel.upsert_month_config(
@@ -960,7 +960,7 @@ def them_thanh_vien_doi_bong(doi_bong_id):
     selected_month = request.form.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         van_dong_vien_ids = request.form.getlist('van_dong_vien_ids')
         loai_thanh_vien = request.form.get('loai_thanh_vien', 'co_dinh')
         ghi_chu = (request.form.get('ghi_chu') or '').strip()
@@ -994,7 +994,7 @@ def sua_thanh_vien_doi_bong(doi_bong_id, thanh_vien_id):
     selected_month = request.form.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         form_data, errors = normalize_team_member_form(request.form)
         if not errors:
             DoiBongModel.update_member(
@@ -1017,7 +1017,7 @@ def xoa_thanh_vien_doi_bong(doi_bong_id, thanh_vien_id):
     selected_month = request.args.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         DoiBongModel.delete_member(doi_bong_id, thanh_vien_id)
         DBLogger.log_success(f"Team member deleted: {thanh_vien_id}", user.get('email'), f'/doi-bong/{doi_bong_id}/thanh-vien/{thanh_vien_id}/xoa')
         return redirect(f'/doi-bong/{doi_bong_id}?thang={selected_month}')
@@ -1033,7 +1033,7 @@ def them_khoan_chi_doi_bong(doi_bong_id):
     selected_month = request.form.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         form_data, errors = normalize_team_expense_form(request.form)
         if not errors:
             DoiBongModel.add_expense(
@@ -1058,7 +1058,7 @@ def xoa_khoan_chi_doi_bong(doi_bong_id, expense_id):
     selected_month = request.args.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         DoiBongModel.delete_expense(doi_bong_id, expense_id)
         DBLogger.log_success(f"Team expense deleted: {expense_id}", user.get('email'), f'/doi-bong/{doi_bong_id}/khoan-chi/{expense_id}/xoa')
         return redirect(f'/doi-bong/{doi_bong_id}?thang={selected_month}')
@@ -1074,7 +1074,7 @@ def them_quyen_doi_bong(doi_bong_id):
     try:
         doi_bong = DoiBongModel.get_by_id(doi_bong_id, _admin_scope_id(user))
         if not doi_bong or (not _is_super_admin(user) and doi_bong[3] not in (None, user.get('id'))):
-            return "KhÃ´ng cÃ³ quyá»n phÃ¢n quyá»n Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền phân quyền đội bóng này", 403
         admin_id = request.form.get('admin_id')
         if admin_id:
             DoiBongModel.add_permission(doi_bong_id, admin_id)
@@ -1091,7 +1091,7 @@ def xoa_quyen_doi_bong(doi_bong_id, permission_id):
     try:
         doi_bong = DoiBongModel.get_by_id(doi_bong_id, _admin_scope_id(user))
         if not doi_bong or (not _is_super_admin(user) and doi_bong[3] not in (None, user.get('id'))):
-            return "KhÃ´ng cÃ³ quyá»n phÃ¢n quyá»n Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền phân quyền đội bóng này", 403
         DoiBongModel.remove_permission(doi_bong_id, permission_id)
         return redirect(f'/doi-bong/{doi_bong_id}')
     except Exception as e:
@@ -1106,13 +1106,13 @@ def cap_nhat_dong_phi_doi_bong(doi_bong_id):
     selected_month = request.form.get('thang') or _current_month()
     try:
         if not _get_team_for_admin_or_403(doi_bong_id, user):
-            return "KhÃ´ng cÃ³ quyá»n cáº­p nháº­t Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền cập nhật đội bóng này", 403
         members = DoiBongModel.get_members_with_payments(doi_bong_id, selected_month)
         updates = []
         for member in members:
             member_id = member[0]
             so_tien = _money_from_form(request.form.get(f'tien_{member_id}', 0))
-            trang_thai = request.form.get(f'trang_thai_{member_id}', 'ChÆ°a Ä‘Ã³ng')
+            trang_thai = request.form.get(f'trang_thai_{member_id}', 'Chưa đóng')
             ghi_chu = (request.form.get(f'ghi_chu_phi_{member_id}') or '').strip()
             updates.append((member_id, so_tien, trang_thai, ghi_chu))
         updated = DoiBongModel.update_payments(selected_month, updates)
@@ -1128,7 +1128,7 @@ def cap_nhat_dong_phi_doi_bong(doi_bong_id):
 @app.route('/them-giai-dau', methods=['POST'])
 @admin_required
 def them_giai_dau():
-    """Táº¡o giáº£i má»›i - ENSURE loai_dau is saved"""
+    """Tạo giải mới - ENSURE loai_dau is saved"""
     user = session.get('user', {})
     try:
         form_data, errors = normalize_tournament_form(request.form)
@@ -1170,19 +1170,19 @@ def them_giai_dau():
         return redirect('/giai-dau')
     except Exception as e:
         DBLogger.log_error(f"Error creating tournament: {str(e)}", user.get('email'), '/them-giai-dau', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/sua-giai-dau/<int:giai_id>', methods=['GET', 'POST'])
 @admin_required
 def sua_giai_dau(giai_id):
-    """Sá»­a giáº£i Ä‘áº¥u - ENSURE loai_dau is updated"""
+    """Sửa giải đấu - ENSURE loai_dau is updated"""
     user = session.get('user', {})
     try:
         if request.method == 'GET':
             TournamentModel.ensure_score_rule_columns()
             giai_raw = _get_tournament_for_admin_or_403(giai_id, user)
             if not giai_raw:
-                return "KhÃ´ng tÃ¬m tháº¥y", 404
+                return "Không tìm thấy", 404
             return render_template('sua_giai.html', giai=giai_raw)
 
         TournamentModel.ensure_score_rule_columns()
@@ -1234,12 +1234,12 @@ def sua_giai_dau(giai_id):
         return redirect('/giai-dau')
     except Exception as e:
         DBLogger.log_error(f"Error updating tournament: {str(e)}", user.get('email'), f'/sua-giai-dau/{giai_id}', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/xoa-giai-dau/<int:giai_id>')
 @admin_required
 def xoa_giai_dau(giai_id):
-    """XÃ³a giáº£i"""
+    """Xóa giải"""
     user = session.get('user', {})
     try:
         giai_raw = _get_tournament_for_admin_or_403(giai_id, user)
@@ -1251,17 +1251,17 @@ def xoa_giai_dau(giai_id):
         return redirect('/giai-dau')
     except Exception as e:
         DBLogger.log_error(f"Error deleting tournament: {str(e)}", user.get('email'), f'/xoa-giai-dau/{giai_id}', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/giai-dau/<int:giai_id>/admin')
 @admin_required
 def chi_tiet_giai_admin(giai_id):
-    """Chi tiáº¿t giáº£i (ADMIN) - FIXED VERSION"""
+    """Chi tiết giải (ADMIN) - FIXED VERSION"""
     user = session.get('user', {})
     try:
         giai_raw = _get_tournament_for_admin_or_403(giai_id, user)
         if not giai_raw:
-            return "KhÃ´ng cÃ³ quyá»n xem giáº£i Ä‘áº¥u nÃ y", 403
+            return "Không có quyền xem giải đấu này", 403
 
         registrations = DangKyGiaiModel.get_by_tournament(giai_id)
         all_vdv = VanDongVienModel.get_available_for_tournament(giai_id)
@@ -1312,14 +1312,14 @@ def chi_tiet_giai_admin(giai_id):
 
         canh_bao = None
         if request.args.get('error') == 'full':
-            canh_bao = "âš ï¸ Giáº£i Ä‘Ã£ Ä‘á»§ sá»‘ ngÆ°á»i dá»± kiáº¿n, khÃ´ng thá»ƒ thÃªm VÄV ná»¯a. HÃ£y tÄƒng 'Sá»‘ ngÆ°á»i dá»± kiáº¿n' trong pháº§n Sá»­a giáº£i náº¿u muá»‘n nháº­n thÃªm."
+            canh_bao = "⚠️ Giải đã đủ số người dự kiến, không thể thêm VĐV nữa. Hãy tăng 'Số người dự kiến' trong phần Sửa giải nếu muốn nhận thêm."
         elif request.args.get('error') == 'prize_over':
-            canh_bao = "Tá»•ng tiá»n thÆ°á»Ÿng nháº­p tay khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ quá»¹ thÆ°á»Ÿng thá»±c táº¿."
+            canh_bao = "Tổng tiền thưởng nhập tay không được vượt quá quỹ thưởng thực tế."
 
         if request.args.get('error') == 'manual_pair':
-            canh_bao = "GhÃ©p Ä‘á»™i thá»§ cÃ´ng khÃ´ng há»£p lá»‡. Má»—i VÄV chá»‰ Ä‘Æ°á»£c chá»n má»™t láº§n vÃ  má»—i Ä‘á»™i cáº§n 2 VÄV."
+            canh_bao = "Ghép đội thủ công không hợp lệ. Mỗi VĐV chỉ được chọn một lần và mỗi đội cần 2 VĐV."
         elif request.args.get('error') == 'manual_pair_min':
-            canh_bao = "Cáº§n Ã­t nháº¥t 2 Ä‘á»™i há»£p lá»‡ Ä‘á»ƒ táº¡o lá»‹ch thi Ä‘áº¥u."
+            canh_bao = "Cần ít nhất 2 đội hợp lệ để tạo lịch thi đấu."
 
         DBLogger.log_request('GET', f'/giai-dau/{giai_id}/admin', user.get('email'))
         permissions = TournamentModel.get_permissions(giai_id)
@@ -1342,12 +1342,12 @@ def chi_tiet_giai_admin(giai_id):
         )
     except Exception as e:
         DBLogger.log_error(f"Error loading tournament: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/admin', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/giai-dau/<int:giai_id>/dang-ky', methods=['POST'])
 @admin_required
 def dang_ky_vdv(giai_id):
-    """ÄÄƒng kÃ½ VÄV"""
+    """Đăng ký VĐV"""
     user = session.get('user', {})
     try:
         van_dong_vien_ids = request.form.getlist('van_dong_vien_ids')
@@ -1383,17 +1383,17 @@ def dang_ky_vdv(giai_id):
 
         added_count = DangKyGiaiModel.register_many(van_dong_vien_ids, giai_id)
 
-        DBLogger.log_success(f"{added_count} VÄV registered for tournament {giai_id}", user.get('email'), f'/giai-dau/{giai_id}/dang-ky')
+        DBLogger.log_success(f"{added_count} VĐV registered for tournament {giai_id}", user.get('email'), f'/giai-dau/{giai_id}/dang-ky')
         suffix = '?error=full' if added_count < selected_count else ''
         return redirect(f'/giai-dau/{giai_id}/admin{suffix}')
     except Exception as e:
-        DBLogger.log_error(f"Error registering VÄV: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/dang-ky', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        DBLogger.log_error(f"Error registering VĐV: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/dang-ky', context=traceback.format_exc())
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/dang-ky-giai/<int:dang_ky_id>/xoa')
 @admin_required
 def xoa_dang_ky(dang_ky_id):
-    """XÃ³a Ä‘Äƒng kÃ½"""
+    """Xóa đăng ký"""
     user = session.get('user', {})
     try:
         with db_cursor() as cursor:
@@ -1408,16 +1408,16 @@ def xoa_dang_ky(dang_ky_id):
         return redirect(f'/giai-dau/{giai_id}/admin')
     except Exception as e:
         DBLogger.log_error(f"Error removing registration: {str(e)}", user.get('email'), f'/dang-ky-giai/{dang_ky_id}/xoa', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/dang-ky-giai/<int:dang_ky_id>/cap-nhat-tien', methods=['POST'])
 @admin_required
 def cap_nhat_tien_dang_ky(dang_ky_id):
-    """Cáº­p nháº­t tiá»n"""
+    """Cập nhật tiền"""
     user = session.get('user', {})
     try:
         so_tien = request.form.get('so_tien', 0)
-        trang_thai = request.form.get('trang_thai', 'ChÆ°a Ä‘Ã³ng')
+        trang_thai = request.form.get('trang_thai', 'Chưa đóng')
 
         with db_cursor() as cursor:
             cursor.execute("SELECT giai_dau_id FROM dang_ky_giai WHERE id = %s;", (dang_ky_id,))
@@ -1427,16 +1427,16 @@ def cap_nhat_tien_dang_ky(dang_ky_id):
             return "Khong co quyen cap nhat giai dau nay", 403
 
         DangKyGiaiModel.update_payment(dang_ky_id, so_tien, trang_thai)
-        DBLogger.log_success(f"Payment updated: {so_tien}Ä‘", user.get('email'), f'/dang-ky-giai/{dang_ky_id}/cap-nhat-tien')
+        DBLogger.log_success(f"Payment updated: {so_tien}đ", user.get('email'), f'/dang-ky-giai/{dang_ky_id}/cap-nhat-tien')
         return redirect(f'/giai-dau/{giai_id}/admin')
     except Exception as e:
         DBLogger.log_error(f"Error updating payment: {str(e)}", user.get('email'), f'/dang-ky-giai/{dang_ky_id}/cap-nhat-tien', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
-@app.route('/giai-dau/<int:giai_id>/chia-lich', methods=['POST'])  # â† CRITICAL: methods=['POST']
+@app.route('/giai-dau/<int:giai_id>/chia-lich', methods=['POST'])  # ← CRITICAL: methods=['POST']
 @admin_required
 def auto_chia_lich(giai_id):
-    """Tá»± sinh lá»‹ch thi Ä‘áº¥u - FIXED VERSION"""
+    """Tự sinh lịch thi đấu - FIXED VERSION"""
     user = session.get('user', {})
     try:
         giai_raw = _get_tournament_for_admin_or_403(giai_id, user)
@@ -1451,10 +1451,10 @@ def auto_chia_lich(giai_id):
         MatchModel.delete_by_tournament(giai_id)
 
         if loai_dau == 'doi':
-            # Doubles: truyá»n (tÃªn, trÃ¬nh Ä‘á»™) Ä‘á»ƒ smart pairing theo level
+            # Doubles: truyền (tên, trình độ) để smart pairing theo level
             players = [(r[2], r[3] or 'D') for r in registrations]
         else:
-            # Singles: chá»‰ cáº§n tÃªn
+            # Singles: chỉ cần tên
             players = [r[2] for r in registrations]
 
         if the_thuc == 'bang':
@@ -1481,7 +1481,7 @@ def auto_chia_lich(giai_id):
         return redirect(f'/giai-dau/{giai_id}/admin')
     except Exception as e:
         DBLogger.log_error(f"Error generating schedule: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/chia-lich', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/giai-dau/<int:giai_id>/ghep-doi-thu-cong', methods=['POST'])
 @admin_required
@@ -1551,7 +1551,7 @@ def ghep_doi_thu_cong(giai_id):
 @app.route('/giai-dau/<int:giai_id>/cap-nhat-tien-hang-loat', methods=['POST'])
 @admin_required
 def cap_nhat_tien_hang_loat(giai_id):
-    """Cáº­p nháº­t phÃ­ Ä‘Ã³ng cho toÃ n bá»™ VÄV trong 1 láº§n submit"""
+    """Cập nhật phí đóng cho toàn bộ VĐV trong 1 lần submit"""
     user = session.get('user', {})
     try:
         if not _get_tournament_for_admin_or_403(giai_id, user):
@@ -1561,7 +1561,7 @@ def cap_nhat_tien_hang_loat(giai_id):
         for reg in registrations:
             reg_id = reg[0]
             so_tien = request.form.get(f'tien_{reg_id}', 0)
-            trang_thai = request.form.get(f'trang_thai_{reg_id}', 'ChÆ°a Ä‘Ã³ng')
+            trang_thai = request.form.get(f'trang_thai_{reg_id}', 'Chưa đóng')
             try:
                 so_tien = float(so_tien) if so_tien else 0
             except ValueError:
@@ -1572,7 +1572,7 @@ def cap_nhat_tien_hang_loat(giai_id):
         return redirect(f'/giai-dau/{giai_id}/admin')
     except Exception as e:
         DBLogger.log_error(f"Batch payment error: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/cap-nhat-tien-hang-loat', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 @app.route('/giai-dau/<int:giai_id>/cap-nhat-giai-thuong', methods=['POST'])
 @admin_required
 def cap_nhat_giai_thuong(giai_id):
@@ -1639,7 +1639,7 @@ def xoa_quyen_giai_dau(giai_id, permission_id):
 @app.route('/tran-dau/<int:tran_id>/cap-nhat-ty-so', methods=['POST'])
 @admin_required
 def cap_nhat_ty_so(tran_id):
-    """Cáº­p nháº­t tá»· sá»‘"""
+    """Cập nhật tỷ số"""
     user = session.get('user', {})
     is_fetch_score_update = request.is_json or request.headers.get('X-Requested-With') == 'fetch'
     try:
@@ -1688,7 +1688,7 @@ def cap_nhat_ty_so(tran_id):
         DBLogger.log_error(f"Error updating match: {str(e)}", user.get('email'), f'/tran-dau/{tran_id}/cap-nhat-ty-so', context=traceback.format_exc())
         if is_fetch_score_update:
             return jsonify({'success': False, 'error': str(e)}), 500
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
 
 @app.route('/giai-dau/<int:giai_id>/live-scores')
 @login_required
@@ -1735,7 +1735,7 @@ def live_scores_giai_dau(giai_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """ÄÄƒng nháº­p"""
+    """Đăng nhập"""
     try:
         if FLASK_SECRET_KEY_ERROR:
             DBLogger.log_error(
@@ -1763,7 +1763,7 @@ def login():
                 user = {"id": vdv[0], "ten": vdv[1], "email": vdv[2], "role": "vdv"}
                 error = None
             else:
-                user, error = None, "Email hoáº·c máº­t kháº©u sai"
+                user, error = None, "Email hoặc mật khẩu sai"
 
         if user:
             session['user'] = user
@@ -1785,11 +1785,11 @@ def login():
             ip_address=request.headers.get('X-Forwarded-For', request.remote_addr),
             user_agent=request.headers.get('User-Agent'),
         )
-        return render_template('login.html', error="Lá»—i há»‡ thá»‘ng"), 500
+        return render_template('login.html', error="Lỗi hệ thống"), 500
 
 @app.route('/dang-xuat')
 def logout():
-    """ÄÄƒng xuáº¥t"""
+    """Đăng xuất"""
     user = session.get('user', {})
     DBLogger.log_success(f"User logged out", user.get('email'), '/dang-xuat')
     session.clear()
@@ -1803,9 +1803,9 @@ def admin_settings():
         return forbidden
     success_key = request.args.get('success')
     success_messages = {
-        'created': 'Táº¡o admin thÃ nh cÃ´ng',
-        'updated': 'Cáº­p nháº­t admin thÃ nh cÃ´ng',
-        'deleted': 'XÃ³a admin thÃ nh cÃ´ng',
+        'created': 'Tạo admin thành công',
+        'updated': 'Cập nhật admin thành công',
+        'deleted': 'Xóa admin thành công',
     }
     return render_template(
         'admin_settings.html',
@@ -1817,7 +1817,7 @@ def admin_settings():
 @app.route('/tao-admin', methods=['POST'])
 @admin_required
 def tao_admin():
-    """Táº¡o admin"""
+    """Tạo admin"""
     user = session.get('user', {})
     try:
         forbidden = _require_super_admin()
@@ -1914,12 +1914,12 @@ def xoa_admin(admin_id):
         DBLogger.log_error(f"Error deleting admin: {str(e)}", user.get('email'), f'/admin-settings/{admin_id}/xoa', context=traceback.format_exc())
         return render_template('admin_settings.html', admins=AdminUserModel.get_all(), error=f"Error: {str(e)}", super_admin_email=SUPER_ADMIN_EMAIL), 500
 
-# ============ VÄV ROUTES ============
+# ============ VĐV ROUTES ============
 
 @app.route('/vdv-dashboard')
 @login_required
 def vdv_dashboard():
-    """VÄV Dashboard"""
+    """VĐV Dashboard"""
     user = session.get('user', {})
     DBLogger.log_request('GET', '/vdv-dashboard', user.get('email'))
 
@@ -1939,14 +1939,14 @@ def vdv_dashboard():
                 giai_detail = prepare_tournament_detail(giai_raw, registrations)
                 vdv_giai.append(giai_detail)
             except Exception as e:
-                DBLogger.log_error(f"Error loading tournament for VÄV: {str(e)}", user.get('email'), '/vdv-dashboard', context=traceback.format_exc())
+                DBLogger.log_error(f"Error loading tournament for VĐV: {str(e)}", user.get('email'), '/vdv-dashboard', context=traceback.format_exc())
                 continue
 
         vdv_doi_bong = DoiBongModel.get_by_vdv(vdv_id)
         return render_template('vdv_dashboard.html', vdv_giai=vdv_giai, vdv_doi_bong=vdv_doi_bong)
     except Exception as e:
-        DBLogger.log_error(f"Error loading VÄV dashboard: {str(e)}", user.get('email'), '/vdv-dashboard', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        DBLogger.log_error(f"Error loading VĐV dashboard: {str(e)}", user.get('email'), '/vdv-dashboard', context=traceback.format_exc())
+        return f"❌ Error: {str(e)}", 500
 
 
 @app.route('/doi-bong/<int:doi_bong_id>/vdv')
@@ -1958,7 +1958,7 @@ def chi_tiet_doi_bong_vdv(doi_bong_id):
     try:
         doi_bong = DoiBongModel.get_by_id_for_vdv(doi_bong_id, user['id'])
         if not doi_bong:
-            return "KhÃ´ng cÃ³ quyá»n xem Ä‘á»™i bÃ³ng nÃ y", 403
+            return "Không có quyền xem đội bóng này", 403
 
         selected_month = request.args.get('thang') or _current_month()
         selected_month_date = DoiBongModel.normalize_month(selected_month)
@@ -1985,13 +1985,13 @@ def chi_tiet_doi_bong_vdv(doi_bong_id):
             current_vdv_id=user.get('id'),
         )
     except Exception as e:
-        DBLogger.log_error(f"Error loading team for VÄV: {str(e)}", user.get('email'), f'/doi-bong/{doi_bong_id}/vdv', context=traceback.format_exc())
+        DBLogger.log_error(f"Error loading team for VĐV: {str(e)}", user.get('email'), f'/doi-bong/{doi_bong_id}/vdv', context=traceback.format_exc())
         return f"Error: {str(e)}", 500
 
 @app.route('/giai-dau/<int:giai_id>/vdv')
 @login_required
 def chi_tiet_giai_vdv(giai_id):
-    """Chi tiáº¿t giáº£i (VÄV)"""
+    """Chi tiết giải (VĐV)"""
     user = session.get('user', {})
 
     if user.get('role') != 'vdv':
@@ -2001,11 +2001,11 @@ def chi_tiet_giai_vdv(giai_id):
         vdv_id = user['id']
         tournaments = DangKyGiaiModel.get_by_vdv(vdv_id)
         if not any(t[1] == giai_id for t in tournaments):
-            return "âŒ KhÃ´ng cÃ³ quyá»n", 403
+            return "❌ Không có quyền", 403
 
         giai_raw = TournamentModel.get_details(giai_id)
         if not giai_raw:
-            return "KhÃ´ng tÃ¬m tháº¥y", 404
+            return "Không tìm thấy", 404
 
         registrations = DangKyGiaiModel.get_by_tournament(giai_id)
         giai_detail = prepare_tournament_detail(giai_raw, registrations)
@@ -2061,7 +2061,26 @@ def chi_tiet_giai_vdv(giai_id):
         )
     except Exception as e:
         DBLogger.log_error(f"Error loading tournament: {str(e)}", user.get('email'), f'/giai-dau/{giai_id}/vdv', context=traceback.format_exc())
-        return f"âŒ Error: {str(e)}", 500
+        return f"❌ Error: {str(e)}", 500
+
+
+def _redirect_legacy_travel_path():
+    target = f"/thu-chi{request.path}"
+    if request.query_string:
+        target = f"{target}?{request.query_string.decode('utf-8', errors='ignore')}"
+    return redirect(target, code=307 if request.method != 'GET' else 302)
+
+
+@app.route('/chuyen-di', methods=['GET', 'POST'])
+@app.route('/chuyen-di/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/thanh-vien', methods=['GET', 'POST'])
+@app.route('/thanh-vien/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/nguoi-xem', methods=['GET', 'POST'])
+@app.route('/nguoi-xem/<path:subpath>', methods=['GET', 'POST'])
+@login_required
+def legacy_travel_routes(subpath=None):
+    return _redirect_legacy_travel_path()
+
 
 app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
     "/thu-chi": travel_app.wsgi_app,

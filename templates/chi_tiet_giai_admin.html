@@ -86,6 +86,7 @@
         <span class="navbar-brand mb-0 h1 fs-6">🏸 {{ giai.ten_giai_dau }}</span>
         <div class="d-flex gap-2">
             <a href="/giai-dau" class="btn btn-sm btn-outline-light">⬅️ Giải đấu</a>
+            <span class="navbar-text text-white-50 small">{{ session.user.display_name or session.user.email }}</span>
             <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">🚪 Đăng xuất</a>
         </div>
     </div>

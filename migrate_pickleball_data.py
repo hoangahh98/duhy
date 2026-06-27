@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 import psycopg2
 from psycopg2 import sql
-from psycopg2.extras import execute_values
+from psycopg2.extras import Json, execute_values
 
 from config import _db_config_from_url
 from schema import ensure_all_schema
@@ -77,7 +77,10 @@ def _copy_table(source, target, table):
                 sql.Identifier(table),
             )
         )
-        rows = source_cursor.fetchall()
+        rows = [
+            tuple(Json(value) if isinstance(value, (dict, list)) else value for value in row)
+            for row in source_cursor.fetchall()
+        ]
         if rows:
             execute_values(
                 target_cursor,

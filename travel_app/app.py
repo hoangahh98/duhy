@@ -331,12 +331,13 @@ def refresh_suggestions():
     except Exception as exc:
         removed_osm = 0
         errors.append(f"Dọn dữ liệu OSM cũ: {exc}")
+    suggestion_counts = DestinationSuggestionModel.suggestion_counts_for_destinations([destination[0] for destination in destinations])
     for destination_id, destination_name in destinations:
         for category in DestinationSuggestionModel.categories():
             if monotonic() - started_at > SUGGESTION_REFRESH_SECONDS_LIMIT:
                 timed_out = True
                 break
-            current_count = DestinationSuggestionModel.suggestion_count(destination_id, category)
+            current_count = suggestion_counts.get((destination_id, category), 0)
             remaining = max(0, SUGGESTIONS_PER_CATEGORY_LIMIT - current_count)
             if remaining <= 0:
                 skipped_full += 1
@@ -349,9 +350,8 @@ def refresh_suggestions():
                 continue
             for place in places:
                 if remaining <= 0:
-                    if not DestinationSuggestionModel.suggestion_exists(destination_id, category, place["name"]):
-                        skipped_new += 1
-                        continue
+                    skipped_new += 1
+                    continue
                 try:
                     was_inserted = DestinationSuggestionModel.upsert_suggestion(
                         destination_id,

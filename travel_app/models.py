@@ -380,33 +380,21 @@ class DestinationSuggestionModel:
         return grouped
 
     @staticmethod
-    def suggestion_count(destination_id, category):
+    def suggestion_counts_for_destinations(destination_ids):
+        if not destination_ids:
+            return {}
         with db_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT COUNT(1)
+                SELECT destination_id, category, COUNT(1)
                 FROM travel_suggestions
-                WHERE destination_id = %s AND category = %s AND active = TRUE;
+                WHERE active = TRUE
+                  AND destination_id = ANY(%s)
+                GROUP BY destination_id, category;
                 """,
-                (destination_id, category),
+                (list(destination_ids),),
             )
-            return cursor.fetchone()[0]
-
-    @staticmethod
-    def suggestion_exists(destination_id, category, name):
-        with db_cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT 1
-                FROM travel_suggestions
-                WHERE destination_id = %s
-                  AND category = %s
-                  AND lower(name) = lower(%s)
-                LIMIT 1;
-                """,
-                (destination_id, category, (name or "").strip()),
-            )
-            return cursor.fetchone() is not None
+            return {(row[0], row[1]): row[2] for row in cursor.fetchall()}
 
     @staticmethod
     def deactivate_osm_suggestions():
@@ -438,6 +426,13 @@ class DestinationSuggestionModel:
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
+                WITH existing AS (
+                    SELECT active
+                    FROM travel_suggestions
+                    WHERE destination_id = %s
+                      AND category = %s
+                      AND name = %s
+                )
                 INSERT INTO travel_suggestions (
                     destination_id, category, name, address, phone, opening_hours,
                     description, map_url, source_url, active
@@ -452,9 +447,12 @@ class DestinationSuggestionModel:
                     source_url = COALESCE(NULLIF(EXCLUDED.source_url, ''), travel_suggestions.source_url),
                     active = TRUE,
                     updated_at = CURRENT_TIMESTAMP
-                RETURNING (xmax = 0) AS inserted;
+                RETURNING (xmax = 0 OR NOT COALESCE((SELECT active FROM existing), TRUE)) AS counts_as_new;
                 """,
                 (
+                    destination_id,
+                    category,
+                    name,
                     destination_id,
                     category,
                     name,

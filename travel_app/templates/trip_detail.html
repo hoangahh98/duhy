@@ -299,12 +299,15 @@
                 {% for category in suggestion_categories %}
                     {% set items = destination_suggestions.get(category, []) %}
                     {% if items %}
-                    <div class="mb-3">
-                        <div class="fw-bold text-success mb-2">{{ category }}</div>
-                        <div class="row g-2">
+                    <div class="suggestion-category-panel mb-3">
+                        <div class="suggestion-category-title">
+                            <span>{{ category }}</span>
+                            <span class="suggestion-category-count">{{ items|length }} gợi ý</span>
+                        </div>
+                        <div class="row g-2 suggestion-category-items">
                             {% for item in items[:10] %}
                             <div class="col-md-6 col-xl-4">
-                                <div class="border rounded p-2 h-100 bg-light">
+                                <div class="suggestion-place-card h-100">
                                     <div class="fw-semibold">{{ item[4] }}</div>
                                     {% if item[5] %}<div class="small text-muted mt-1">{{ item[5] }}</div>{% endif %}
                                     {% if item[6] %}<div class="small mt-2"><span class="fw-semibold">SĐT:</span> {{ item[6] }}</div>{% endif %}

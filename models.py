@@ -862,11 +862,17 @@ class EntertainmentCardGameModel:
             cursor.execute("""
                 SELECT g.id, g.name, g.status, g.created_at, g.ended_at,
                        COUNT(DISTINCT p.id) AS player_count,
-                       COUNT(DISTINCT r.id) AS round_count
+                       COUNT(DISTINCT r.id) AS round_count,
+                       COALESCE(admin.display_name, client.display_name, g.created_by_role, 'Không rõ') AS creator_name,
+                       g.created_by_role,
+                       g.owner_admin_id,
+                       g.created_by_client_id
                 FROM entertainment_card_games g
+                LEFT JOIN users admin ON admin.id = g.owner_admin_id
+                LEFT JOIN user_clients client ON client.id = g.created_by_client_id
                 LEFT JOIN entertainment_card_players p ON p.game_id = g.id AND p.active = TRUE
                 LEFT JOIN entertainment_card_rounds r ON r.game_id = g.id
-                GROUP BY g.id
+                GROUP BY g.id, admin.display_name, client.display_name
                 ORDER BY
                     CASE WHEN g.status = 'active' THEN 0 ELSE 1 END,
                     g.created_at DESC
@@ -884,6 +890,15 @@ class EntertainmentCardGameModel:
                 WHERE id = %s;
             """, (game_id,))
             return cursor.fetchone()
+
+    @staticmethod
+    def delete_game(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                DELETE FROM entertainment_card_games
+                WHERE id = %s;
+            """, (game_id,))
+            return cursor.rowcount
 
     @staticmethod
     def get_players(game_id):

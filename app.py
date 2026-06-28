@@ -262,6 +262,43 @@ def tao_van_ghi_diem():
         return redirect(url_for('giai_tri_ghi_diem'))
 
 
+def _can_delete_entertainment_game(user, game):
+    if not game:
+        return False
+    if user.get('role') == 'admin':
+        return True
+    return user.get('role') == 'vdv' and game[5] == user.get('id')
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>/xoa', methods=['POST'])
+@login_required
+def xoa_van_ghi_diem(game_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        flash('Không tìm thấy ván ghi điểm.', 'warning')
+        return redirect(url_for('giai_tri_ghi_diem'))
+    if not _can_delete_entertainment_game(user, game):
+        flash('Bạn không có quyền xóa ván này.', 'danger')
+        return redirect(url_for('giai_tri_ghi_diem'))
+    try:
+        EntertainmentCardGameModel.delete_game(game_id)
+        DBLogger.log_user_action(
+            user_email=user.get('email'),
+            user_role=user.get('role'),
+            action='DELETE_ENTERTAINMENT_CARD_GAME',
+            route=f'/giai-tri/ghi-diem/{game_id}/xoa',
+            method='POST',
+            status_code=302,
+            details={'game_id': game_id, 'name': game[1]},
+        )
+        flash('Đã xóa ván ghi điểm.', 'success')
+    except Exception as e:
+        DBLogger.log_error(f"Error deleting entertainment card game: {str(e)}", user.get('email'), f'/giai-tri/ghi-diem/{game_id}/xoa', context=traceback.format_exc())
+        flash('Không xóa được ván ghi điểm.', 'danger')
+    return redirect(url_for('giai_tri_ghi_diem'))
+
+
 @app.route('/giai-tri/ghi-diem/<int:game_id>')
 @login_required
 def chi_tiet_van_ghi_diem(game_id):

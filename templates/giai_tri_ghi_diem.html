@@ -13,6 +13,9 @@
         <div class="container-fluid px-4">
             <div class="d-flex gap-2 align-items-center flex-wrap ms-auto">
                 <a class="btn btn-sm btn-outline-light" href="/giai-tri">Giải trí</a>
+                {% if user.role == 'admin' %}
+                    <a class="btn btn-sm btn-outline-light" href="/van-dong-vien?return_to=/giai-tri/ghi-diem">Người chơi</a>
+                {% endif %}
                 <span class="navbar-text d-none d-md-inline">{{ user.display_name or user.email }} · {{ 'Admin' if user.role == 'admin' else 'Client' }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
             </div>
@@ -51,15 +54,26 @@
                         {% if games %}
                             <div class="list-group">
                                 {% for game in games %}
-                                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="/giai-tri/ghi-diem/{{ game[0] }}">
-                                        <span>
-                                            <span class="fw-bold">{{ game[1] }}</span>
-                                            <span class="d-block text-muted small">{{ game[5] }} người chơi · {{ game[6] }} trận</span>
-                                        </span>
-                                        <span class="badge {{ 'bg-success' if game[2] == 'active' else 'bg-secondary' }}">
-                                            {{ 'Đang chơi' if game[2] == 'active' else 'Đã kết thúc' }}
-                                        </span>
-                                    </a>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">{{ game[1] }}</div>
+                                                <div class="text-muted small">{{ game[5] }} người chơi · {{ game[6] }} trận</div>
+                                                <div class="text-muted small">Tạo bởi: {{ game[7] }}</div>
+                                            </div>
+                                            <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+                                                <span class="badge {{ 'bg-success' if game[2] == 'active' else 'bg-secondary' }}">
+                                                    {{ 'Đang chơi' if game[2] == 'active' else 'Đã kết thúc' }}
+                                                </span>
+                                                <a class="btn btn-sm btn-primary" href="/giai-tri/ghi-diem/{{ game[0] }}">Mở</a>
+                                                {% if user.role == 'admin' or (user.role == 'vdv' and game[10] == user.id) %}
+                                                <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/xoa" onsubmit="return confirm({{ ('Xóa ván ' ~ game[1] ~ '? Toàn bộ người chơi và lịch sử điểm của ván này cũng sẽ bị xóa.')|tojson }});">
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
                                 {% endfor %}
                             </div>
                         {% else %}

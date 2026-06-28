@@ -2085,6 +2085,8 @@ def _redirect_legacy_travel_path():
 @app.route('/chuyen-di/<path:subpath>', methods=['GET', 'POST'])
 @app.route('/thanh-vien', methods=['GET', 'POST'])
 @app.route('/thanh-vien/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/goi-y', methods=['GET', 'POST'])
+@app.route('/goi-y/<path:subpath>', methods=['GET', 'POST'])
 @app.route('/nguoi-xem', methods=['GET', 'POST'])
 @app.route('/nguoi-xem/<path:subpath>', methods=['GET', 'POST'])
 @login_required

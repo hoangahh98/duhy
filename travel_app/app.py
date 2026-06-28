@@ -1,141 +1,17 @@
 from datetime import date
 from secrets import token_urlsafe
-from time import time
-from urllib.parse import quote_plus
 
-import requests
 from flask import Flask, flash, redirect, render_template, request, send_from_directory, session, url_for
 
 from .auth import AuthService, admin_required, login_required
-from .config import APP_NAME, FLASK_SECRET_KEY, GOOGLE_PLACES_API_KEY, GOOGLE_PLACES_TIMEOUT, SUPER_ADMIN_EMAIL, normalize_admin_user
-from .models import FinanceModel, PeopleModel, TripModel, UserModel, admin_scope_id, build_summary, is_super_admin, money
+from .config import APP_NAME, FLASK_SECRET_KEY, SUPER_ADMIN_EMAIL, normalize_admin_user
+from .models import DestinationSuggestionModel, FinanceModel, PeopleModel, TripModel, UserModel, admin_scope_id, build_summary, is_super_admin, money
 from .schema import init_schema
 
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
 EXPENSE_CATEGORIES = ("Khách sạn", "Ẩm thực", "Vui chơi", "Thể thao", "Khám phá", "Khác")
-HOTEL_CATEGORY = "Khách sạn"
-GOOGLE_TEXT_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-GOOGLE_PLACE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
-SUGGESTION_CACHE_TTL_SECONDS = 60 * 30
-_suggestion_cache = {}
-
-
-def _cached_suggestions(cache_key):
-    cached = _suggestion_cache.get(cache_key)
-    if cached and cached["expires_at"] > time():
-        return cached["value"]
-    return None
-
-
-def _store_suggestions(cache_key, value):
-    _suggestion_cache[cache_key] = {
-        "expires_at": time() + SUGGESTION_CACHE_TTL_SECONDS,
-        "value": value,
-    }
-
-
-def _google_place_details(place_id):
-    response = requests.get(
-        GOOGLE_PLACE_DETAILS_URL,
-        params={
-            "place_id": place_id,
-            "fields": "name,formatted_address,formatted_phone_number,international_phone_number,opening_hours,url,rating,user_ratings_total,website",
-            "language": "vi",
-            "key": GOOGLE_PLACES_API_KEY,
-        },
-        timeout=GOOGLE_PLACES_TIMEOUT,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if payload.get("status") not in ("OK", "ZERO_RESULTS"):
-        return {}
-    return payload.get("result") or {}
-
-
-def _google_place_search(query):
-    response = requests.get(
-        GOOGLE_TEXT_SEARCH_URL,
-        params={
-            "query": query,
-            "language": "vi",
-            "region": "vn",
-            "key": GOOGLE_PLACES_API_KEY,
-        },
-        timeout=GOOGLE_PLACES_TIMEOUT,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if payload.get("status") not in ("OK", "ZERO_RESULTS"):
-        raise ValueError(payload.get("error_message") or payload.get("status") or "Google Places error")
-    places = []
-    for result in (payload.get("results") or [])[:3]:
-        details = _google_place_details(result.get("place_id")) if result.get("place_id") else {}
-        opening_hours = details.get("opening_hours") or {}
-        places.append(
-            {
-                "name": details.get("name") or result.get("name") or "Chưa có tên",
-                "address": details.get("formatted_address") or result.get("formatted_address") or "Chưa có địa chỉ",
-                "phone": details.get("formatted_phone_number") or details.get("international_phone_number") or "Chưa có số điện thoại",
-                "open_now": opening_hours.get("open_now"),
-                "hours": (opening_hours.get("weekday_text") or [])[:3],
-                "rating": details.get("rating") or result.get("rating"),
-                "reviews": details.get("user_ratings_total") or result.get("user_ratings_total"),
-                "maps_url": details.get("url") or f"https://www.google.com/maps/search/?api=1&query={quote_plus(result.get('name') or query)}",
-                "website": details.get("website"),
-            }
-        )
-    return places
-
-
-def build_hotel_suggestions(expenses):
-    hotel_expense = next(
-        (
-            expense["row"]
-            for expense in reversed(expenses)
-            if expense["row"][2] == HOTEL_CATEGORY and (expense["row"][4] or "").strip()
-        ),
-        None,
-    )
-    if not hotel_expense:
-        return None, []
-
-    hotel = hotel_expense[4].strip()
-    groups = [
-        ("Quán ăn ngon", "Top 3 nhà hàng/quán ăn quanh khách sạn", f"quán ăn ngon gần {hotel}"),
-        ("Cà phê đẹp", "Top 3 quán cà phê quanh khách sạn", f"cà phê đẹp gần {hotel}"),
-        ("Vui chơi", "Top 3 địa điểm vui chơi gần nơi ở", f"địa điểm vui chơi gần {hotel}"),
-        ("Khám phá", "Top 3 điểm tham quan, check-in, đi dạo quanh khu vực", f"địa điểm khám phá gần {hotel}"),
-        ("Thể thao", "Top 3 hoạt động thể thao, giải trí vận động gần khách sạn", f"thể thao giải trí gần {hotel}"),
-    ]
-    cache_key = hotel.lower()
-    cached = _cached_suggestions(cache_key)
-    if cached is not None:
-        return hotel, cached
-
-    suggestions = []
-    for title, description, query in groups:
-        encoded_query = quote_plus(query)
-        item = {
-            "title": title,
-            "description": description,
-            "query": query,
-            "maps_url": f"https://www.google.com/maps/search/{encoded_query}",
-            "search_url": f"https://www.google.com/search?q={quote_plus(query + ' đánh giá địa chỉ giờ mở cửa')}",
-            "places": [],
-            "error": None,
-        }
-        if not GOOGLE_PLACES_API_KEY:
-            item["error"] = "Chưa cấu hình GOOGLE_PLACES_API_KEY nên chưa lấy được tên quán, địa chỉ, điện thoại và giờ mở cửa tự động."
-        else:
-            try:
-                item["places"] = _google_place_search(query)
-            except (requests.RequestException, ValueError) as exc:
-                item["error"] = f"Chưa lấy được dữ liệu địa điểm: {exc}"
-        suggestions.append(item)
-    _store_suggestions(cache_key, suggestions)
-    return hotel, suggestions
 
 with app.app_context():
     init_schema()
@@ -183,6 +59,7 @@ def trips():
     return render_template(
         "trips.html",
         trips=TripModel.all_for_admin(admin_scope_id(user)),
+        destinations=DestinationSuggestionModel.destinations(),
         user=user,
         super_admin_email=SUPER_ADMIN_EMAIL,
     )
@@ -193,6 +70,88 @@ def trips():
 def people_list():
     user = session["user"]
     return render_template("people.html", people=PeopleModel.all_for_admin(admin_scope_id(user)), user=user)
+
+
+@app.route("/goi-y")
+@admin_required
+def suggestions():
+    try:
+        destination_id = int(request.args.get("destination_id") or 0) or None
+    except ValueError:
+        destination_id = None
+    category = request.args.get("category") or None
+    if category not in DestinationSuggestionModel.categories():
+        category = None
+    return render_template(
+        "suggestions.html",
+        destinations=DestinationSuggestionModel.destinations(),
+        categories=DestinationSuggestionModel.categories(),
+        suggestions=DestinationSuggestionModel.suggestions(destination_id=destination_id, category=category),
+        selected_destination_id=destination_id,
+        selected_category=category,
+    )
+
+
+@app.route("/goi-y/dia-danh", methods=["POST"])
+@admin_required
+def add_destination():
+    try:
+        DestinationSuggestionModel.create_destination(request.form.get("name"))
+        flash("Đã thêm địa danh.", "success")
+    except ValueError as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("suggestions"))
+
+
+@app.route("/goi-y/them", methods=["POST"])
+@admin_required
+def add_suggestion():
+    try:
+        DestinationSuggestionModel.create_suggestion(
+            request.form.get("destination_id"),
+            request.form.get("category"),
+            request.form.get("name"),
+            request.form.get("address", ""),
+            request.form.get("phone", ""),
+            request.form.get("opening_hours", ""),
+            request.form.get("description", ""),
+            request.form.get("map_url", ""),
+            request.form.get("source_url", ""),
+        )
+        flash("Đã thêm gợi ý.", "success")
+    except Exception as exc:
+        flash(f"Không thêm được gợi ý: {exc}", "danger")
+    return redirect(url_for("suggestions"))
+
+
+@app.route("/goi-y/<int:suggestion_id>/sua", methods=["POST"])
+@admin_required
+def edit_suggestion(suggestion_id):
+    try:
+        DestinationSuggestionModel.update_suggestion(
+            suggestion_id,
+            request.form.get("destination_id"),
+            request.form.get("category"),
+            request.form.get("name"),
+            request.form.get("address", ""),
+            request.form.get("phone", ""),
+            request.form.get("opening_hours", ""),
+            request.form.get("description", ""),
+            request.form.get("map_url", ""),
+            request.form.get("source_url", ""),
+        )
+        flash("Đã cập nhật gợi ý.", "success")
+    except Exception as exc:
+        flash(f"Không cập nhật được gợi ý: {exc}", "danger")
+    return redirect(url_for("suggestions"))
+
+
+@app.route("/goi-y/<int:suggestion_id>/xoa", methods=["POST"])
+@admin_required
+def delete_suggestion(suggestion_id):
+    DestinationSuggestionModel.delete_suggestion(suggestion_id)
+    flash("Đã xóa gợi ý.", "success")
+    return redirect(url_for("suggestions"))
 
 
 @app.route("/thanh-vien/them", methods=["POST"])
@@ -310,7 +269,21 @@ def add_trip():
     if not name:
         flash("Tên chuyến đi là bắt buộc.", "danger")
         return redirect(url_for("trips"))
-    TripModel.create(name, request.form.get("description", ""), session["user"]["id"])
+    TripModel.create(name, request.form.get("description", ""), session["user"]["id"], request.form.get("destination_id"))
+    return redirect(url_for("trips"))
+
+
+@app.route("/chuyen-di/<int:trip_id>/sua", methods=["POST"])
+@admin_required
+def edit_trip(trip_id):
+    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+        return "Không có quyền", 403
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Tên chuyến đi là bắt buộc.", "danger")
+        return redirect(url_for("trips"))
+    TripModel.update(trip_id, name, request.form.get("description", ""), request.form.get("destination_id"))
+    flash("Đã cập nhật chuyến đi.", "success")
     return redirect(url_for("trips"))
 
 
@@ -332,7 +305,6 @@ def trip_detail(trip_id):
         return "Không có quyền xem chuyến đi này", 403
     members = FinanceModel.members(trip_id)
     expenses = FinanceModel.expenses(trip_id)
-    suggestion_hotel, hotel_suggestions = build_hotel_suggestions(expenses)
     return render_template(
         "trip_detail.html",
         user=user,
@@ -347,8 +319,9 @@ def trip_detail(trip_id):
         permissions=TripModel.permissions(trip_id),
         can_manage_permissions=is_super_admin(user) or trip[3] == user["id"],
         expense_categories=EXPENSE_CATEGORIES,
-        suggestion_hotel=suggestion_hotel,
-        hotel_suggestions=hotel_suggestions,
+        destination=DestinationSuggestionModel.destination(trip[4]) if len(trip) > 4 else None,
+        destination_suggestions=DestinationSuggestionModel.suggestions_for_destination(trip[4]) if len(trip) > 4 else {},
+        suggestion_categories=DestinationSuggestionModel.categories(),
     )
 
 
@@ -429,9 +402,6 @@ def add_expense(trip_id):
         flash("Nội dung khoản chi không hợp lệ.", "danger")
         return redirect(url_for("trip_detail", trip_id=trip_id))
     note = (request.form.get("note") or "").strip()
-    if title == HOTEL_CATEGORY and not note:
-        flash("Nhập tên khách sạn và địa chỉ ở ghi chú để hệ thống tự hiện gợi ý.", "danger")
-        return redirect(url_for("trip_detail", trip_id=trip_id))
     try:
         FinanceModel.add_expense(
             trip_id,

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-shell wide">
+    <div class="d-flex justify-content-between align-items-start mb-3 gap-3 flex-wrap">
+        <div>
+            <h1 class="h3 mb-1 text-success fw-bold">Gợi ý du lịch</h1>
+            <div class="text-muted">Kho gợi ý theo địa danh, dùng lại cho các chuyến đi đã chọn địa danh.</div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <section class="card h-100">
+                <div class="card-hdr green">Thêm địa danh</div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_destination') }}" method="POST" class="vstack gap-2">
+                        <label class="form-label fw-semibold">Tên địa danh</label>
+                        <input class="form-control" name="name" placeholder="Ví dụ: Mộc Châu" required>
+                        <button class="btn btn-success fw-bold" data-loading-text="Đang thêm...">Thêm địa danh</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+        <div class="col-lg-8">
+            <section class="card h-100">
+                <div class="card-hdr blue">Thêm gợi ý</div>
+                <div class="card-body">
+                    <form action="{{ url_for('add_suggestion') }}" method="POST" class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Địa danh</label>
+                            <select class="form-select" name="destination_id" required>
+                                <option value="">Chọn địa danh</option>
+                                {% for destination in destinations %}
+                                <option value="{{ destination[0] }}" {% if selected_destination_id == destination[0] %}selected{% endif %}>{{ destination[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Loại</label>
+                            <select class="form-select" name="category" required>
+                                {% for category in categories %}
+                                <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Tên địa điểm</label>
+                            <input class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" name="address" placeholder="Địa chỉ">
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control" name="phone" placeholder="Số điện thoại">
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-control" name="opening_hours" placeholder="Giờ mở cửa">
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" name="map_url" placeholder="Link bản đồ">
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-control" name="source_url" placeholder="Link nguồn/website">
+                        </div>
+                        <div class="col-12">
+                            <input class="form-control" name="description" placeholder="Mô tả ngắn / ghi chú nội bộ">
+                        </div>
+                        <div class="col-12 d-grid">
+                            <button class="btn btn-primary fw-bold" data-loading-text="Đang lưu...">Lưu gợi ý</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="card mb-3">
+        <div class="card-hdr dark">Bộ lọc</div>
+        <div class="card-body">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold">Địa danh</label>
+                    <select class="form-select" name="destination_id">
+                        <option value="">Tất cả địa danh</option>
+                        {% for destination in destinations %}
+                        <option value="{{ destination[0] }}" {% if selected_destination_id == destination[0] %}selected{% endif %}>{{ destination[1] }} ({{ destination[2] }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Loại</label>
+                    <select class="form-select" name="category">
+                        <option value="">Tất cả loại</option>
+                        {% for category in categories %}
+                        <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-grid">
+                    <button class="btn btn-outline-primary" data-loading-text="Đang lọc...">Lọc</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-hdr blue">
+            <span>Danh sách gợi ý</span>
+            <span class="small fw-normal">{{ suggestions|length }} bản ghi</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Địa danh</th>
+                            <th>Loại</th>
+                            <th>Địa điểm</th>
+                            <th>Thông tin</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in suggestions %}
+                        <tr>
+                            <td class="fw-semibold">{{ item[2] }}</td>
+                            <td><span class="badge bg-success">{{ item[3] }}</span></td>
+                            <td>
+                                <div class="fw-semibold">{{ item[4] }}</div>
+                                {% if item[8] %}<div class="small text-muted">{{ item[8] }}</div>{% endif %}
+                            </td>
+                            <td class="small">
+                                {% if item[5] %}<div><span class="fw-semibold">Địa chỉ:</span> {{ item[5] }}</div>{% endif %}
+                                {% if item[6] %}<div><span class="fw-semibold">SĐT:</span> {{ item[6] }}</div>{% endif %}
+                                {% if item[7] %}<div><span class="fw-semibold">Giờ:</span> {{ item[7] }}</div>{% endif %}
+                                <div class="d-flex gap-2 flex-wrap mt-1">
+                                    {% if item[9] %}<a href="{{ item[9] }}" target="_blank" rel="noopener">Bản đồ</a>{% endif %}
+                                    {% if item[10] %}<a href="{{ item[10] }}" target="_blank" rel="noopener">Nguồn</a>{% endif %}
+                                </div>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editSuggestion{{ item[0] }}" data-feedback="off">Sửa</button>
+                                <form class="d-inline" action="{{ url_for('delete_suggestion', suggestion_id=item[0]) }}" method="POST" onsubmit="return confirm('Xóa gợi ý này?')">
+                                    <button class="btn btn-sm btn-outline-danger">Xóa</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not suggestions %}
+                        <tr><td colspan="5" class="text-muted">Chưa có gợi ý nào theo bộ lọc này.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {% for item in suggestions %}
+    <div class="modal fade" id="editSuggestion{{ item[0] }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="{{ url_for('edit_suggestion', suggestion_id=item[0]) }}" method="POST">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">Sửa gợi ý</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Địa danh</label>
+                            <select class="form-select" name="destination_id" required>
+                                {% for destination in destinations %}
+                                <option value="{{ destination[0] }}" {% if item[1] == destination[0] %}selected{% endif %}>{{ destination[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Loại</label>
+                            <select class="form-select" name="category" required>
+                                {% for category in categories %}
+                                <option value="{{ category }}" {% if item[3] == category %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Tên địa điểm</label>
+                            <input class="form-control" name="name" value="{{ item[4] }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Địa chỉ</label>
+                            <input class="form-control" name="address" value="{{ item[5] }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Số điện thoại</label>
+                            <input class="form-control" name="phone" value="{{ item[6] }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Giờ mở cửa</label>
+                            <input class="form-control" name="opening_hours" value="{{ item[7] }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Link bản đồ</label>
+                            <input class="form-control" name="map_url" value="{{ item[9] }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Link nguồn/website</label>
+                            <input class="form-control" name="source_url" value="{{ item[10] }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mô tả / ghi chú</label>
+                            <textarea class="form-control" name="description" rows="2">{{ item[8] }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-feedback="off">Hủy</button>
+                        <button class="btn btn-primary fw-bold" data-loading-text="Đang lưu...">Lưu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

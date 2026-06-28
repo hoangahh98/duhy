@@ -273,6 +273,160 @@ class PeopleModel:
             cursor.execute("UPDATE travel_people SET active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s;", (person_id,))
 
 
+class DestinationSuggestionModel:
+    @staticmethod
+    def categories():
+        return ("Quán ăn ngon", "Cà phê đẹp", "Vui chơi", "Khám phá", "Thể thao", "Khác")
+
+    @staticmethod
+    def destinations():
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT d.id, d.name, COUNT(s.id) AS suggestion_count
+                FROM travel_destinations d
+                LEFT JOIN travel_suggestions s ON d.id = s.destination_id AND s.active = TRUE
+                WHERE d.active = TRUE
+                GROUP BY d.id, d.name
+                ORDER BY d.name ASC;
+                """
+            )
+            return cursor.fetchall()
+
+    @staticmethod
+    def destination(destination_id):
+        if not destination_id:
+            return None
+        with db_cursor() as cursor:
+            cursor.execute("SELECT id, name FROM travel_destinations WHERE id = %s AND active = TRUE;", (destination_id,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def create_destination(name):
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("Tên địa danh là bắt buộc")
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO travel_destinations (name)
+                VALUES (%s)
+                ON CONFLICT (name) DO UPDATE SET active = TRUE, updated_at = CURRENT_TIMESTAMP
+                RETURNING id;
+                """,
+                (name,),
+            )
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def suggestions(destination_id=None, category=None):
+        params = []
+        filters = ["s.active = TRUE", "d.active = TRUE"]
+        if destination_id:
+            filters.append("s.destination_id = %s")
+            params.append(destination_id)
+        if category:
+            filters.append("s.category = %s")
+            params.append(category)
+        with db_cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT s.id, s.destination_id, d.name, s.category, s.name, s.address, s.phone,
+                       s.opening_hours, s.description, s.map_url, s.source_url, s.sort_order
+                FROM travel_suggestions s
+                INNER JOIN travel_destinations d ON s.destination_id = d.id
+                WHERE {' AND '.join(filters)}
+                ORDER BY d.name ASC, s.category ASC, s.sort_order ASC, s.id ASC;
+                """,
+                tuple(params),
+            )
+            return cursor.fetchall()
+
+    @staticmethod
+    def suggestions_for_destination(destination_id):
+        if not destination_id:
+            return {}
+        grouped = {}
+        for row in DestinationSuggestionModel.suggestions(destination_id=destination_id):
+            grouped.setdefault(row[3], []).append(row)
+        return grouped
+
+    @staticmethod
+    def create_suggestion(destination_id, category, name, address="", phone="", opening_hours="", description="", map_url="", source_url=""):
+        if not DestinationSuggestionModel.destination(destination_id):
+            raise ValueError("Địa danh không hợp lệ")
+        if category not in DestinationSuggestionModel.categories():
+            raise ValueError("Loại gợi ý không hợp lệ")
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("Tên gợi ý là bắt buộc")
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO travel_suggestions (
+                    destination_id, category, name, address, phone, opening_hours,
+                    description, map_url, source_url
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """,
+                (
+                    destination_id,
+                    category,
+                    name,
+                    (address or "").strip(),
+                    (phone or "").strip(),
+                    (opening_hours or "").strip(),
+                    (description or "").strip(),
+                    (map_url or "").strip(),
+                    (source_url or "").strip(),
+                ),
+            )
+
+    @staticmethod
+    def update_suggestion(suggestion_id, destination_id, category, name, address="", phone="", opening_hours="", description="", map_url="", source_url=""):
+        if not DestinationSuggestionModel.destination(destination_id):
+            raise ValueError("Địa danh không hợp lệ")
+        if category not in DestinationSuggestionModel.categories():
+            raise ValueError("Loại gợi ý không hợp lệ")
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("Tên gợi ý là bắt buộc")
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                UPDATE travel_suggestions
+                SET destination_id = %s,
+                    category = %s,
+                    name = %s,
+                    address = %s,
+                    phone = %s,
+                    opening_hours = %s,
+                    description = %s,
+                    map_url = %s,
+                    source_url = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+                """,
+                (
+                    destination_id,
+                    category,
+                    name,
+                    (address or "").strip(),
+                    (phone or "").strip(),
+                    (opening_hours or "").strip(),
+                    (description or "").strip(),
+                    (map_url or "").strip(),
+                    (source_url or "").strip(),
+                    suggestion_id,
+                ),
+            )
+
+    @staticmethod
+    def delete_suggestion(suggestion_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("UPDATE travel_suggestions SET active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = %s;", (suggestion_id,))
+
+
 class TripModel:
     @staticmethod
     def all_for_admin(admin_id=None):
@@ -280,12 +434,13 @@ class TripModel:
             if admin_id:
                 cursor.execute(
                     """
-                    SELECT t.id, t.name, t.description, COUNT(tm.id), t.owner_admin_id
+                    SELECT t.id, t.name, t.description, COUNT(tm.id), t.owner_admin_id, t.destination_id, d.name
                     FROM trips t
                     LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.active = TRUE
                     LEFT JOIN trip_admin_permissions p ON t.id = p.trip_id AND p.admin_id = %s
+                    LEFT JOIN travel_destinations d ON t.destination_id = d.id
                     WHERE t.owner_admin_id = %s OR p.admin_id IS NOT NULL
-                    GROUP BY t.id
+                    GROUP BY t.id, d.id, d.name
                     ORDER BY t.id DESC;
                     """,
                     (admin_id, admin_id),
@@ -293,10 +448,11 @@ class TripModel:
             else:
                 cursor.execute(
                     """
-                    SELECT t.id, t.name, t.description, COUNT(tm.id), t.owner_admin_id
+                    SELECT t.id, t.name, t.description, COUNT(tm.id), t.owner_admin_id, t.destination_id, d.name
                     FROM trips t
                     LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.active = TRUE
-                    GROUP BY t.id
+                    LEFT JOIN travel_destinations d ON t.destination_id = d.id
+                    GROUP BY t.id, d.id, d.name
                     ORDER BY t.id DESC;
                     """
                 )
@@ -324,15 +480,24 @@ class TripModel:
             if admin_id:
                 cursor.execute(
                     """
-                    SELECT t.id, t.name, t.description, t.owner_admin_id
+                    SELECT t.id, t.name, t.description, t.owner_admin_id, t.destination_id, d.name
                     FROM trips t
                     LEFT JOIN trip_admin_permissions p ON t.id = p.trip_id AND p.admin_id = %s
+                    LEFT JOIN travel_destinations d ON t.destination_id = d.id
                     WHERE t.id = %s AND (t.owner_admin_id = %s OR p.admin_id IS NOT NULL);
                     """,
                     (admin_id, trip_id, admin_id),
                 )
             else:
-                cursor.execute("SELECT id, name, description, owner_admin_id FROM trips WHERE id = %s;", (trip_id,))
+                cursor.execute(
+                    """
+                    SELECT t.id, t.name, t.description, t.owner_admin_id, t.destination_id, d.name
+                    FROM trips t
+                    LEFT JOIN travel_destinations d ON t.destination_id = d.id
+                    WHERE t.id = %s;
+                    """,
+                    (trip_id,),
+                )
             return cursor.fetchone()
 
     @staticmethod
@@ -352,13 +517,28 @@ class TripModel:
             return cursor.fetchone()
 
     @staticmethod
-    def create(name, description, owner_admin_id):
+    def create(name, description, owner_admin_id, destination_id=None):
         with db_cursor(commit=True) as cursor:
             cursor.execute(
-                "INSERT INTO trips (name, description, owner_admin_id) VALUES (%s, %s, %s) RETURNING id;",
-                (name, description, owner_admin_id),
+                "INSERT INTO trips (name, description, owner_admin_id, destination_id) VALUES (%s, %s, %s, %s) RETURNING id;",
+                (name, description, owner_admin_id, destination_id or None),
             )
             return cursor.fetchone()[0]
+
+    @staticmethod
+    def update(trip_id, name, description, destination_id=None):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                UPDATE trips
+                SET name = %s,
+                    description = %s,
+                    destination_id = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+                """,
+                (name, description, destination_id or None, trip_id),
+            )
 
     @staticmethod
     def delete(trip_id):

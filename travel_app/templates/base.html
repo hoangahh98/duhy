@@ -26,6 +26,9 @@
                         {% if request.path != '/thanh-vien' %}
                             <a class="btn btn-sm btn-outline-light" href="{{ url_for('people_list') }}">Thành viên</a>
                         {% endif %}
+                        {% if request.path != '/goi-y' %}
+                            <a class="btn btn-sm btn-outline-light" href="{{ url_for('suggestions') }}">Gợi ý</a>
+                        {% endif %}
                     {% else %}
                         {% if request.path != '/nguoi-xem' %}
                             <a class="btn btn-sm btn-outline-light" href="{{ url_for('viewer_dashboard') }}">Chuyến đi</a>

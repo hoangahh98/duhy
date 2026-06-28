@@ -234,93 +234,6 @@
         </div>
     </div>
 
-    <section class="card mb-3" id="travelSuggestionCard">
-        <div class="card-hdr blue">
-            <span>Gợi ý quanh khách sạn</span>
-            <span class="small fw-normal">Ăn uống, cà phê, vui chơi, khám phá</span>
-        </div>
-        <div class="card-body">
-            {% if suggestion_hotel %}
-            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
-                <div>
-                    <div class="small text-muted">Đang lấy theo khách sạn mới nhất</div>
-                    <div class="fw-semibold">{{ suggestion_hotel }}</div>
-                </div>
-                <span class="badge bg-success">Tự động</span>
-            </div>
-            <div class="list-group list-group-flush border rounded overflow-hidden">
-                {% for item in hotel_suggestions %}
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
-                        <div>
-                            <div class="fw-semibold">{{ item.title }}</div>
-                            <div class="small text-muted">{{ item.description }}</div>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2 small">
-                            <a href="{{ item.maps_url }}" target="_blank" rel="noopener">Tìm thêm</a>
-                        </div>
-                    </div>
-                    {% if item.places %}
-                    <div class="row g-2">
-                        {% for place in item.places %}
-                        <div class="col-lg-4">
-                            <div class="border rounded p-2 h-100">
-                                <div class="fw-semibold">{{ loop.index }}. {{ place.name }}</div>
-                                <div class="small text-muted mt-1">{{ place.address }}</div>
-                                <div class="small mt-2">
-                                    <span class="fw-semibold">SĐT:</span> {{ place.phone }}
-                                </div>
-                                <div class="small">
-                                    <span class="fw-semibold">Giờ:</span>
-                                    {% if place.open_now is sameas true %}
-                                        <span class="text-success">Đang mở</span>
-                                    {% elif place.open_now is sameas false %}
-                                        <span class="text-danger">Đang đóng</span>
-                                    {% else %}
-                                        Chưa có dữ liệu
-                                    {% endif %}
-                                </div>
-                                {% if place.hours %}
-                                <div class="small text-muted mt-1">
-                                    {% for hour in place.hours %}
-                                        <div>{{ hour }}</div>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                {% if place.rating %}
-                                <div class="small mt-2">
-                                    <span class="fw-semibold">Đánh giá:</span> {{ place.rating }}{% if place.reviews %}/5 ({{ place.reviews }} lượt){% endif %}
-                                </div>
-                                {% endif %}
-                                <div class="d-flex flex-wrap gap-2 small mt-2">
-                                    <a href="{{ place.maps_url }}" target="_blank" rel="noopener">Bản đồ</a>
-                                    {% if place.website %}
-                                    <a href="{{ place.website }}" target="_blank" rel="noopener">Website</a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% elif item.error %}
-                    <div class="alert alert-warning py-2 mb-0 small">{{ item.error }}</div>
-                    {% else %}
-                    <div class="text-muted small">Chưa tìm thấy địa điểm phù hợp.</div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            <div class="small text-muted mt-3">
-                Gợi ý tự hiện sau khi thêm khoản chi Khách sạn có ghi chú tên khách sạn/địa chỉ. Dữ liệu tên địa điểm, địa chỉ, số điện thoại và giờ mở cửa lấy từ Google Places khi đã cấu hình API key.
-            </div>
-            {% else %}
-            <div class="alert alert-info mb-0">
-                Thêm khoản chi <strong>Khách sạn</strong> và nhập ghi chú là tên khách sạn/địa chỉ, hệ thống sẽ tự hiện danh sách gợi ý quanh khách sạn tại đây.
-            </div>
-            {% endif %}
-        </div>
-    </section>
-
     <section class="card mb-3">
         <div class="card-body p-0">
             <div class="table-responsive expense-table-wrap">
@@ -368,6 +281,59 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </section>
+
+    <section class="card mb-3" id="travelSuggestionCard">
+        <div class="card-hdr blue">
+            <span>Gợi ý theo địa danh</span>
+            <span class="small fw-normal">Ăn uống, cà phê, vui chơi, khám phá</span>
+        </div>
+        <div class="card-body">
+            {% if destination %}
+            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
+                <div>
+                    <div class="small text-muted">Địa danh đã chọn</div>
+                    <div class="fw-semibold">{{ destination[1] }}</div>
+                </div>
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('suggestions', destination_id=destination[0]) }}">Quản lý gợi ý</a>
+            </div>
+            {% if destination_suggestions %}
+                {% for category in suggestion_categories %}
+                    {% set items = destination_suggestions.get(category, []) %}
+                    {% if items %}
+                    <div class="mb-3">
+                        <div class="fw-bold text-success mb-2">{{ category }}</div>
+                        <div class="row g-2">
+                            {% for item in items[:6] %}
+                            <div class="col-md-6 col-xl-4">
+                                <div class="border rounded p-2 h-100 bg-light">
+                                    <div class="fw-semibold">{{ item[4] }}</div>
+                                    {% if item[5] %}<div class="small text-muted mt-1">{{ item[5] }}</div>{% endif %}
+                                    {% if item[6] %}<div class="small mt-2"><span class="fw-semibold">SĐT:</span> {{ item[6] }}</div>{% endif %}
+                                    {% if item[7] %}<div class="small"><span class="fw-semibold">Giờ:</span> {{ item[7] }}</div>{% endif %}
+                                    {% if item[8] %}<div class="small mt-2">{{ item[8] }}</div>{% endif %}
+                                    <div class="d-flex flex-wrap gap-2 small mt-2">
+                                        {% if item[9] %}<a href="{{ item[9] }}" target="_blank" rel="noopener">Bản đồ</a>{% endif %}
+                                        {% if item[10] %}<a href="{{ item[10] }}" target="_blank" rel="noopener">Nguồn</a>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+            <div class="alert alert-info mb-0">
+                Địa danh này chưa có gợi ý. Vào menu <a href="{{ url_for('suggestions', destination_id=destination[0]) }}">Gợi ý</a> để thêm dữ liệu thủ công.
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info mb-0">
+                Chuyến đi chưa chọn địa danh du lịch. Về danh sách chuyến đi, bấm <strong>Sửa chuyến đi</strong> và chọn địa danh để hiện gợi ý đã lưu.
+            </div>
+            {% endif %}
         </div>
     </section>
 

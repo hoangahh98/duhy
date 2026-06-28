@@ -12,6 +12,7 @@
     <nav class="navbar navbar-dark app-navbar mb-4 py-2">
         <div class="container-fluid px-4">
             <div class="d-flex gap-2 align-items-center flex-wrap ms-auto">
+                <a class="btn btn-sm btn-outline-light" href="{{ '/' if user.role == 'admin' else '/vdv-dashboard' }}">Trang chủ</a>
                 <a class="btn btn-sm btn-outline-light" href="/giai-tri">Giải trí</a>
                 {% if user.role == 'admin' %}
                     <a class="btn btn-sm btn-outline-light" href="/giai-tri/nguoi-choi">Người chơi</a>

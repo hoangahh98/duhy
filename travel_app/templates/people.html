@@ -11,7 +11,7 @@
     <section class="card mb-4">
         <div class="card-hdr green">Thêm thành viên</div>
         <div class="card-body">
-            <form action="/thanh-vien/them" method="POST" class="row g-2 align-items-end">
+            <form action="{{ url_for('add_person') }}" method="POST" class="row g-2 align-items-end">
                 <div class="col-md-5">
                     <label class="form-label fw-semibold">Tên thành viên</label>
                     <input class="form-control" name="name" required>
@@ -52,7 +52,7 @@
                         <td class="text-muted">{{ person[2] or 'Chưa có' }}</td>
                         <td class="text-center text-nowrap">
                             <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonModal{{ person[0] }}" data-feedback="off">✏️</button>
-                            <form action="/thanh-vien/{{ person[0] }}/xoa" method="POST" class="d-inline" onsubmit="return confirm('Xóa thành viên này khỏi danh bạ? Thành viên đã có trong chuyến đi cũ vẫn được giữ lại trong chuyến đi đó.')">
+                            <form action="{{ url_for('delete_person', person_id=person[0]) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa thành viên này khỏi danh bạ? Thành viên đã có trong chuyến đi cũ vẫn được giữ lại trong chuyến đi đó.')">
                                 <button class="btn btn-sm btn-danger py-0">🗑️</button>
                             </form>
                         </td>
@@ -72,7 +72,7 @@
 <div class="modal fade" id="editPersonModal{{ person[0] }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="/thanh-vien/{{ person[0] }}/sua" method="POST">
+            <form action="{{ url_for('edit_person', person_id=person[0]) }}" method="POST">
                 <div class="modal-header bg-warning">
                     <h5 class="modal-title fw-bold">Sửa thành viên</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

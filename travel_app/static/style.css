@@ -147,6 +147,34 @@ body {
     min-width: 90px !important;
 }
 
+.expense-mobile-list {
+    display: none;
+}
+
+.expense-mobile-card {
+    background: #fff;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 10px;
+}
+
+.expense-mobile-splits {
+    display: grid;
+    gap: 7px;
+}
+
+.expense-mobile-split-row {
+    align-items: center;
+    background: #f8fbff;
+    border: 1px solid #e6edf5;
+    border-radius: 7px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 118px;
+    padding: 8px;
+}
+
 .compact-form {
     max-width: 760px;
 }
@@ -239,5 +267,13 @@ body {
     .card-hdr {
         align-items: flex-start;
         padding: 9px 12px;
+    }
+
+    .expense-desktop-table {
+        display: none;
+    }
+
+    .expense-mobile-list {
+        display: block;
     }
 }

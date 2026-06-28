@@ -3,6 +3,7 @@ from functools import lru_cache
 from secrets import token_urlsafe
 from time import monotonic, sleep
 from urllib.parse import quote_plus
+import unicodedata
 
 import requests
 from flask import Flask, flash, redirect, render_template, request, send_from_directory, session, url_for
@@ -36,6 +37,21 @@ OSM_DESTINATION_HINTS = {
     "Quy Nhơn": "Quy Nhơn, Bình Định, Việt Nam",
     "Cần Thơ": "Cần Thơ, Việt Nam",
 }
+OSM_DESTINATION_KEYWORDS = {
+    "Hạ Long": ["Hạ Long", "Ha Long", "Quảng Ninh", "Quang Ninh"],
+    "Đà Nẵng": ["Đà Nẵng", "Da Nang"],
+    "Cát Bà": ["Cát Bà", "Cat Ba", "Hải Phòng", "Hai Phong"],
+    "Phú Quốc": ["Phú Quốc", "Phu Quoc", "Kiên Giang", "Kien Giang"],
+    "Hội An": ["Hội An", "Hoi An", "Quảng Nam", "Quang Nam"],
+    "Đà Lạt": ["Đà Lạt", "Da Lat", "Lâm Đồng", "Lam Dong"],
+    "Nha Trang": ["Nha Trang", "Khánh Hòa", "Khanh Hoa"],
+    "Sa Pa": ["Sa Pa", "Sapa", "Lào Cai", "Lao Cai"],
+    "Huế": ["Huế", "Hue", "Thừa Thiên Huế", "Thua Thien Hue"],
+    "Ninh Bình": ["Ninh Bình", "Ninh Binh"],
+    "Hà Giang": ["Hà Giang", "Ha Giang"],
+    "Quy Nhơn": ["Quy Nhơn", "Quy Nhon", "Bình Định", "Binh Dinh"],
+    "Cần Thơ": ["Cần Thơ", "Can Tho"],
+}
 OSM_CATEGORY_TERMS = {
     "Quán ăn ngon": ["restaurant", "seafood restaurant", "food", "local food"],
     "Cà phê đẹp": ["cafe", "coffee shop", "tea house"],
@@ -46,8 +62,22 @@ OSM_CATEGORY_TERMS = {
 }
 
 
+def _ascii_fold(value):
+    normalized = unicodedata.normalize("NFKD", value or "")
+    return "".join(char for char in normalized if not unicodedata.combining(char)).lower()
+
+
 def _osm_destination_query(destination_name):
     return OSM_DESTINATION_HINTS.get(destination_name, f"{destination_name}, Việt Nam")
+
+
+def _destination_keywords(destination_name):
+    return OSM_DESTINATION_KEYWORDS.get(destination_name, [destination_name])
+
+
+def _osm_result_matches_destination(destination_name, result):
+    haystack = _ascii_fold(result.get("display_name") or "")
+    return any(_ascii_fold(keyword) in haystack for keyword in _destination_keywords(destination_name))
 
 
 def _osm_country_is_vietnam(result):
@@ -153,6 +183,8 @@ def _search_osm_suggestions(destination_name, category, max_terms=OSM_TERMS_PER_
         response.raise_for_status()
         for result in response.json():
             if not _osm_country_is_vietnam(result):
+                continue
+            if not _osm_result_matches_destination(destination_name, result):
                 continue
             place = _normalize_osm_result(result)
             if not place:
@@ -296,6 +328,7 @@ def refresh_suggestions():
     errors = []
     try:
         removed_invalid = DestinationSuggestionModel.deactivate_non_vietnam_osm_suggestions()
+        removed_invalid += DestinationSuggestionModel.deactivate_mismatched_osm_suggestions(OSM_DESTINATION_KEYWORDS)
     except Exception as exc:
         removed_invalid = 0
         errors.append(f"Dọn dữ liệu OSM cũ: {exc}")

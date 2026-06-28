@@ -426,6 +426,35 @@ class DestinationSuggestionModel:
             return cursor.rowcount
 
     @staticmethod
+    def deactivate_mismatched_osm_suggestions(destination_keywords):
+        removed = 0
+        with db_cursor(commit=True) as cursor:
+            for destination_name, keywords in destination_keywords.items():
+                keyword_filters = []
+                params = [destination_name]
+                for keyword in keywords:
+                    keyword_filters.append("COALESCE(s.address, '') ILIKE %s")
+                    params.append(f"%{keyword}%")
+                if not keyword_filters:
+                    continue
+                cursor.execute(
+                    f"""
+                    UPDATE travel_suggestions s
+                    SET active = FALSE,
+                        updated_at = CURRENT_TIMESTAMP
+                    FROM travel_destinations d
+                    WHERE s.destination_id = d.id
+                      AND d.name = %s
+                      AND s.active = TRUE
+                      AND s.source_url LIKE 'https://www.openstreetmap.org/%'
+                      AND NOT ({' OR '.join(keyword_filters)});
+                    """,
+                    tuple(params),
+                )
+                removed += cursor.rowcount
+        return removed
+
+    @staticmethod
     def upsert_suggestion(destination_id, category, name, address="", phone="", opening_hours="", description="", map_url="", source_url=""):
         if not DestinationSuggestionModel.destination(destination_id):
             raise ValueError("Địa danh không hợp lệ")

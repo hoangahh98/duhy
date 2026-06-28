@@ -169,6 +169,8 @@ def init_schema():
                 title VARCHAR(255) NOT NULL,
                 amount NUMERIC(14, 0) NOT NULL CHECK (amount >= 0),
                 note TEXT NOT NULL DEFAULT '',
+                split_mode VARCHAR(20) NOT NULL DEFAULT 'shared',
+                private_member_id INTEGER REFERENCES trip_members(id) ON DELETE SET NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -216,6 +218,27 @@ def init_schema():
         cursor.execute("ALTER TABLE trip_members ADD COLUMN IF NOT EXISTS person_id INTEGER REFERENCES travel_people(id) ON DELETE SET NULL;")
         cursor.execute("ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination_id INTEGER REFERENCES travel_destinations(id) ON DELETE SET NULL;")
         cursor.execute("ALTER TABLE travel_suggestions ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;")
+        cursor.execute("ALTER TABLE trip_expenses ADD COLUMN IF NOT EXISTS split_mode VARCHAR(20) NOT NULL DEFAULT 'shared';")
+        cursor.execute("ALTER TABLE trip_expenses ADD COLUMN IF NOT EXISTS private_member_id INTEGER REFERENCES trip_members(id) ON DELETE SET NULL;")
+        cursor.execute(
+            """
+            UPDATE trip_expenses e
+            SET split_mode = 'private',
+                private_member_id = single_split.member_id
+            FROM (
+                SELECT expense_id,
+                       MIN(member_id) FILTER (WHERE amount > 0) AS member_id,
+                       SUM(amount) AS split_total,
+                       COUNT(*) FILTER (WHERE amount > 0) AS positive_count
+                FROM trip_expense_splits
+                GROUP BY expense_id
+            ) single_split
+            WHERE e.id = single_split.expense_id
+              AND e.split_mode = 'shared'
+              AND single_split.positive_count = 1
+              AND single_split.split_total = e.amount;
+            """
+        )
         cursor.execute(
             """
             UPDATE trips

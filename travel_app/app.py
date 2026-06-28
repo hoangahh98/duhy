@@ -607,7 +607,7 @@ def add_member(trip_id):
         return "Không có quyền chọn thành viên này", 403
     FinanceModel.add_member_from_person(trip_id, person_id)
     FinanceModel.rebalance_expenses_equal(trip_id)
-    flash("Đã thêm thành viên và chia đều lại toàn bộ khoản chi.", "success")
+    flash("Đã thêm thành viên và chia đều lại các khoản chi chung.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
@@ -618,7 +618,7 @@ def delete_member(trip_id, member_id):
         return "Không có quyền", 403
     FinanceModel.delete_member(trip_id, member_id)
     FinanceModel.rebalance_expenses_equal(trip_id)
-    flash("Đã xóa thành viên và chia đều lại toàn bộ khoản chi.", "success")
+    flash("Đã xóa thành viên và chia đều lại các khoản chi chung.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
@@ -670,6 +670,8 @@ def add_expense(trip_id):
         flash("Nội dung khoản chi không hợp lệ.", "danger")
         return redirect(url_for("trip_detail", trip_id=trip_id))
     note = (request.form.get("note") or "").strip()
+    split_mode = request.form.get("split_mode") or "shared"
+    private_member_id = request.form.get("private_member_id")
     try:
         FinanceModel.add_expense(
             trip_id,
@@ -678,8 +680,13 @@ def add_expense(trip_id):
             request.form.get("amount"),
             note,
             [member[0] for member in members],
+            split_mode,
+            private_member_id,
         )
-        flash("Đã thêm khoản chi và chia đều cho mọi người.", "success")
+        if split_mode == "private":
+            flash("Đã thêm khoản chi riêng cho thành viên đã chọn.", "success")
+        else:
+            flash("Đã thêm khoản chi chung và chia đều cho mọi người.", "success")
     except ValueError as exc:
         flash(str(exc), "danger")
     return redirect(url_for("trip_detail", trip_id=trip_id))

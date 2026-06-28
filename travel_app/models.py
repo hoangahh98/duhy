@@ -855,7 +855,7 @@ class FinanceModel:
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
-                SELECT id, amount
+                SELECT id, amount, split_mode, private_member_id
                 FROM trip_expenses
                 WHERE trip_id = %s
                 ORDER BY id ASC;
@@ -863,13 +863,21 @@ class FinanceModel:
                 (trip_id,),
             )
             expenses = cursor.fetchall()
-            for expense_id, amount in expenses:
+            for expense_id, amount, split_mode, private_member_id in expenses:
                 amount = money(amount)
-                base = amount // len(member_ids)
-                remainder = int(amount - (base * len(member_ids)))
-                splits = []
-                for index, member_id in enumerate(member_ids):
-                    splits.append((expense_id, member_id, base + (1 if index < remainder else 0)))
+                if split_mode == "private" and private_member_id in member_ids:
+                    splits = [(expense_id, private_member_id, amount)]
+                else:
+                    if split_mode == "private":
+                        cursor.execute(
+                            "UPDATE trip_expenses SET split_mode = 'shared', private_member_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                            (expense_id,),
+                        )
+                    base = amount // len(member_ids)
+                    remainder = int(amount - (base * len(member_ids)))
+                    splits = []
+                    for index, member_id in enumerate(member_ids):
+                        splits.append((expense_id, member_id, base + (1 if index < remainder else 0)))
                 cursor.execute("DELETE FROM trip_expense_splits WHERE expense_id = %s;", (expense_id,))
                 cursor.executemany(
                     "INSERT INTO trip_expense_splits (expense_id, member_id, amount) VALUES (%s, %s, %s);",
@@ -896,7 +904,7 @@ class FinanceModel:
         with db_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT e.id, e.spent_date, e.title, e.amount, e.note
+                SELECT e.id, e.spent_date, e.title, e.amount, e.note, e.split_mode, e.private_member_id
                 FROM trip_expenses e
                 WHERE e.trip_id = %s
                 ORDER BY e.spent_date ASC, e.id ASC;
@@ -921,25 +929,36 @@ class FinanceModel:
         return [{"row": expense, "splits": splits.get(expense[0], {})} for expense in expenses]
 
     @staticmethod
-    def add_expense(trip_id, spent_date, title, amount, note, member_ids):
+    def add_expense(trip_id, spent_date, title, amount, note, member_ids, split_mode="shared", private_member_id=None):
         amount = money(amount)
         if amount < 0:
             raise ValueError("Số tiền chi không hợp lệ")
         if not member_ids:
             raise ValueError("Cần có thành viên để chia tiền")
-        base = amount // len(member_ids)
-        remainder = int(amount - (base * len(member_ids)))
-        splits = []
-        for index, member_id in enumerate(member_ids):
-            splits.append((member_id, base + (1 if index < remainder else 0)))
+        split_mode = "private" if split_mode == "private" else "shared"
+        if split_mode == "private":
+            try:
+                private_member_id = int(private_member_id)
+            except (TypeError, ValueError):
+                private_member_id = None
+            if private_member_id not in member_ids:
+                raise ValueError("Cần chọn thành viên mua riêng hợp lệ")
+            splits = [(private_member_id, amount)]
+        else:
+            private_member_id = None
+            base = amount // len(member_ids)
+            remainder = int(amount - (base * len(member_ids)))
+            splits = []
+            for index, member_id in enumerate(member_ids):
+                splits.append((member_id, base + (1 if index < remainder else 0)))
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
-                INSERT INTO trip_expenses (trip_id, spent_date, title, amount, note)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO trip_expenses (trip_id, spent_date, title, amount, note, split_mode, private_member_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id;
                 """,
-                (trip_id, spent_date, title, amount, note),
+                (trip_id, spent_date, title, amount, note, split_mode, private_member_id),
             )
             expense_id = cursor.fetchone()[0]
             cursor.executemany(
@@ -951,17 +970,30 @@ class FinanceModel:
     @staticmethod
     def update_expense_splits(expense_id, title, spent_date, amount, note, split_updates):
         amount = money(amount)
-        total_split = sum(money(item["amount"]) for item in split_updates)
+        normalized_splits = [
+            {"member_id": item["member_id"], "amount": money(item["amount"])}
+            for item in split_updates
+        ]
+        total_split = sum(item["amount"] for item in normalized_splits)
         if total_split != amount:
             raise ValueError(f"Tổng tiền chia ({total_split:,.0f}) phải bằng tiền khoản chi ({amount:,.0f})")
+        positive_splits = [item for item in normalized_splits if item["amount"] > 0]
+        split_mode = "private" if len(positive_splits) == 1 and positive_splits[0]["amount"] == amount else "shared"
+        private_member_id = positive_splits[0]["member_id"] if split_mode == "private" else None
         with db_cursor(commit=True) as cursor:
             cursor.execute(
                 """
                 UPDATE trip_expenses
-                SET title = %s, spent_date = %s, amount = %s, note = %s, updated_at = CURRENT_TIMESTAMP
+                SET title = %s,
+                    spent_date = %s,
+                    amount = %s,
+                    note = %s,
+                    split_mode = %s,
+                    private_member_id = %s,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
                 """,
-                (title, spent_date, amount, note, expense_id),
+                (title, spent_date, amount, note, split_mode, private_member_id, expense_id),
             )
             cursor.executemany(
                 """
@@ -969,7 +1001,7 @@ class FinanceModel:
                 VALUES (%s, %s, %s)
                 ON CONFLICT (expense_id, member_id) DO UPDATE SET amount = EXCLUDED.amount;
                 """,
-                [(expense_id, item["member_id"], money(item["amount"])) for item in split_updates],
+                [(expense_id, item["member_id"], item["amount"]) for item in normalized_splits],
             )
 
     @staticmethod

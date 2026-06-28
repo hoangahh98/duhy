@@ -66,7 +66,7 @@
                         </div>
                         {% endif %}
                         <div class="alert alert-info py-2 mb-0 small">
-                            Khi thêm thành viên mới, hệ thống tự chia đều lại toàn bộ khoản chi cho mọi người.
+                            Khi thêm thành viên mới, hệ thống chỉ chia đều lại các khoản chi chung. Khoản riêng vẫn giữ cho đúng thành viên đã chọn.
                         </div>
                         <button class="btn btn-success fw-bold" data-loading-text="Đang thêm..." {% if not available_people %}disabled{% endif %}>Thêm vào chuyến đi</button>
                     </form>
@@ -221,6 +221,22 @@
                             <label class="form-label small fw-semibold">Số tiền</label>
                             <input class="form-control" type="number" min="0" step="1" name="amount" required>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Loại khoản chi</label>
+                            <select class="form-select" name="split_mode" id="expenseSplitMode">
+                                <option value="shared">Chung</option>
+                                <option value="private">Riêng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="privateMemberField">
+                            <label class="form-label small fw-semibold">Thành viên mua riêng</label>
+                            <select class="form-select" name="private_member_id" id="privateMemberSelect">
+                                <option value="">Chọn thành viên</option>
+                                {% for member in members %}
+                                <option value="{{ member[0] }}">{{ member[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-md-2 d-grid">
                             <button class="btn btn-success" data-loading-text="Đang thêm...">Thêm</button>
                         </div>
@@ -228,7 +244,7 @@
                             <input class="form-control" name="note" id="expenseNote" placeholder="Ghi chú khoản chi">
                         </div>
                     </form>
-                    <div class="small text-muted">Khi thêm mới, hệ thống tự chia đều cho tất cả thành viên trong chuyến đi.</div>
+                    <div class="small text-muted">Khoản chung sẽ chia đều cho tất cả thành viên. Khoản riêng chỉ tính cho thành viên được chọn.</div>
                 </div>
             </div>
         </div>
@@ -257,6 +273,13 @@
                                     <option value="{{ category }}" {% if row[2] == category or (row[2] not in expense_categories and category == 'Khác') %}selected{% endif %}>{{ category }}</option>
                                     {% endfor %}
                                 </select>
+                                <div class="mb-1">
+                                    {% if row[5] == 'private' %}
+                                    <span class="badge bg-warning text-dark">Riêng</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Chung</span>
+                                    {% endif %}
+                                </div>
                                 <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm mb-1" type="date" name="spent_date" value="{{ row[1] }}">
                                 <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm" name="note" value="{{ row[4] }}" placeholder="Ghi chú">
                             </td>
@@ -416,6 +439,9 @@ function copyMemberEmails(button) {
 
 const expenseCategory = document.getElementById('expenseCategory');
 const expenseNote = document.getElementById('expenseNote');
+const expenseSplitMode = document.getElementById('expenseSplitMode');
+const privateMemberField = document.getElementById('privateMemberField');
+const privateMemberSelect = document.getElementById('privateMemberSelect');
 
 function updateExpenseNotePlaceholder() {
     if (!expenseCategory || !expenseNote) return;
@@ -429,6 +455,22 @@ function updateExpenseNotePlaceholder() {
 if (expenseCategory) {
     expenseCategory.addEventListener('change', updateExpenseNotePlaceholder);
     updateExpenseNotePlaceholder();
+}
+
+function updatePrivateMemberField() {
+    if (!expenseSplitMode || !privateMemberField || !privateMemberSelect) return;
+    const isPrivate = expenseSplitMode.value === 'private';
+    privateMemberField.classList.toggle('d-none', !isPrivate);
+    privateMemberSelect.required = isPrivate;
+    privateMemberSelect.disabled = !isPrivate;
+    if (!isPrivate) {
+        privateMemberSelect.value = '';
+    }
+}
+
+if (expenseSplitMode) {
+    expenseSplitMode.addEventListener('change', updatePrivateMemberField);
+    updatePrivateMemberField();
 }
 </script>
 {% endblock %}

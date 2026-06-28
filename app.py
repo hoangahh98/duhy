@@ -336,14 +336,10 @@ def ghi_diem_tran_bai(game_id):
 
     players = EntertainmentCardGameModel.get_players(game_id)
     scores = {player[0]: request.form.get(f'score_{player[0]}', 0) for player in players}
-    starter_player_id = request.form.get('starter_player_id') or None
     try:
-        if starter_player_id:
-            starter_player_id = int(starter_player_id)
         round_id, round_no = EntertainmentCardGameModel.add_round(
             game_id,
             scores,
-            starter_player_id=starter_player_id,
             note=request.form.get('note'),
         )
         DBLogger.log_user_action(

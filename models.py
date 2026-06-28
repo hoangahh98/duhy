@@ -944,6 +944,8 @@ class EntertainmentCardGameModel:
                 raise ValueError("Điểm từng người phải là số nguyên.")
         if not clean_scores:
             raise ValueError("Cần ít nhất 1 người chơi để ghi điểm.")
+        if sum(score for _, score in clean_scores) != 0:
+            raise ValueError("Tổng điểm của trận phải bằng 0.")
 
         with db_cursor(commit=True) as cursor:
             cursor.execute("""

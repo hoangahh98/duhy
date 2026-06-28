@@ -259,7 +259,7 @@
 
     <section class="card mb-3">
         <div class="card-body p-0">
-            <div class="table-responsive expense-table-wrap expense-desktop-table">
+            <div class="table-responsive expense-table-wrap">
                 <table class="table table-bordered align-middle expense-table mb-0">
                     <thead class="table-success">
                         <tr>
@@ -272,7 +272,7 @@
                     <tbody>
                         {% for expense in expenses %}
                         {% set row = expense.row %}
-                        <tr class="expense-edit-surface">
+                        <tr>
                             <td class="sticky-col">
                                 <form id="expense-form-{{ row[0] }}" action="/chuyen-di/{{ trip[0] }}/chi/{{ row[0] }}" method="POST"></form>
                                 <select form="expense-form-{{ row[0] }}" class="form-select form-select-sm mb-1 fw-semibold" name="title" required>
@@ -310,63 +310,6 @@
                         {% endif %}
                     </tbody>
                 </table>
-            </div>
-            <div class="expense-mobile-list p-2">
-                {% for expense in expenses %}
-                {% set row = expense.row %}
-                <div class="expense-mobile-card">
-                    <form id="mobile-expense-form-{{ row[0] }}" action="/chuyen-di/{{ trip[0] }}/chi/{{ row[0] }}" method="POST" class="expense-edit-surface">
-                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                            <div class="flex-grow-1">
-                                <select class="form-select form-select-sm fw-semibold" name="title" required>
-                                    {% for category in expense_categories %}
-                                    <option value="{{ category }}" {% if row[2] == category or (row[2] not in expense_categories and category == 'Khác') %}selected{% endif %}>{{ category }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div>
-                                {% if row[5] == 'private' %}
-                                <span class="badge bg-warning text-dark">Riêng</span>
-                                {% else %}
-                                <span class="badge bg-success">Chung</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-6">
-                                <label class="form-label small mb-1">Ngày chi</label>
-                                <input class="form-control form-control-sm" type="date" name="spent_date" value="{{ row[1] }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small mb-1">Tổng chi</label>
-                                <input class="form-control form-control-sm total-input fw-bold" type="number" min="0" step="1" name="amount" value="{{ row[3]|int }}">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label small mb-1">Ghi chú</label>
-                                <input class="form-control form-control-sm" name="note" value="{{ row[4] }}" placeholder="Ghi chú">
-                            </div>
-                        </div>
-                        <div class="expense-mobile-splits">
-                            {% for member in members %}
-                            <div class="expense-mobile-split-row">
-                                <div class="fw-semibold text-break">{{ member[1] }}</div>
-                                <input class="form-control form-control-sm split-input" type="number" min="0" step="1" name="split_{{ row[0] }}_{{ member[0] }}" value="{{ expense.splits.get(member[0], 0)|int }}">
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="small split-status mt-2"></div>
-                    </form>
-                    <div class="d-grid gap-2 mt-2">
-                        <button form="mobile-expense-form-{{ row[0] }}" class="btn btn-sm btn-primary" data-loading-text="Đang lưu...">Lưu khoản chi</button>
-                        <form action="/chuyen-di/{{ trip[0] }}/chi/{{ row[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa khoản chi này?')">
-                            <button class="btn btn-sm btn-outline-danger w-100">Xóa</button>
-                        </form>
-                    </div>
-                </div>
-                {% endfor %}
-                {% if not expenses %}
-                <div class="text-muted">Chưa có khoản chi nào.</div>
-                {% endif %}
             </div>
         </div>
     </section>
@@ -481,7 +424,7 @@ function updateSplitStatus(row) {
     status.textContent = ok ? 'Đủ: ' + sum.toLocaleString('vi-VN') : 'Lệch: ' + (sum - total).toLocaleString('vi-VN');
     status.className = 'small split-status ' + (ok ? 'text-success' : 'text-danger');
 }
-document.querySelectorAll('.expense-edit-surface').forEach(row => {
+document.querySelectorAll('.expense-table tbody tr').forEach(row => {
     row.addEventListener('input', () => updateSplitStatus(row));
     updateSplitStatus(row);
 });

@@ -1,7 +1,7 @@
 from datetime import date
 from functools import lru_cache
 from secrets import token_urlsafe
-from time import sleep
+from time import monotonic, sleep
 from urllib.parse import quote_plus
 
 import requests
@@ -17,6 +17,8 @@ app.secret_key = FLASK_SECRET_KEY
 
 EXPENSE_CATEGORIES = ("Khách sạn", "Ẩm thực", "Vui chơi", "Thể thao", "Khám phá", "Khác")
 SUGGESTIONS_PER_CATEGORY_LIMIT = 10
+SUGGESTION_REFRESH_SECONDS_LIMIT = 20
+OSM_TERMS_PER_CATEGORY_REFRESH = 2
 OSM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 OSM_USER_AGENT = "duhy-travel-suggestions/1.0"
 OSM_DESTINATION_HINTS = {
@@ -93,6 +95,10 @@ def _osm_source_url(result):
     return ""
 
 
+def _limit_text(value, limit):
+    return (value or "").strip()[:limit]
+
+
 def _normalize_osm_result(result):
     extratags = result.get("extratags") or {}
     namedetails = result.get("namedetails") or {}
@@ -109,9 +115,9 @@ def _normalize_osm_result(result):
     opening_hours = extratags.get("opening_hours") or ""
     source_url = _osm_source_url(result)
     return {
-        "name": name,
+        "name": _limit_text(name, 255),
         "address": display_name,
-        "phone": phone,
+        "phone": _limit_text(phone, 80),
         "opening_hours": opening_hours,
         "description": "Dữ liệu cộng đồng từ OpenStreetMap, có thể thiếu hoặc cũ. Nên kiểm tra lại trước khi dùng.",
         "map_url": source_url or f"https://www.openstreetmap.org/search?query={quote_plus(display_name or name)}",
@@ -119,10 +125,10 @@ def _normalize_osm_result(result):
     }
 
 
-def _search_osm_suggestions(destination_name, category):
+def _search_osm_suggestions(destination_name, category, max_terms=OSM_TERMS_PER_CATEGORY_REFRESH):
     places = []
     seen = set()
-    terms = OSM_CATEGORY_TERMS.get(category, [category])
+    terms = OSM_CATEGORY_TERMS.get(category, [category])[:max_terms]
     viewbox = _get_osm_destination_viewbox(destination_name)
     for index, term in enumerate(terms):
         params = {
@@ -284,16 +290,29 @@ def refresh_suggestions():
     inserted = 0
     updated = 0
     skipped_new = 0
-    removed_invalid = DestinationSuggestionModel.deactivate_non_vietnam_osm_suggestions()
+    skipped_full = 0
+    timed_out = False
+    started_at = monotonic()
     errors = []
+    try:
+        removed_invalid = DestinationSuggestionModel.deactivate_non_vietnam_osm_suggestions()
+    except Exception as exc:
+        removed_invalid = 0
+        errors.append(f"Dọn dữ liệu OSM cũ: {exc}")
     for destination_id, destination_name in destinations:
         for category in DestinationSuggestionModel.categories():
+            if monotonic() - started_at > SUGGESTION_REFRESH_SECONDS_LIMIT:
+                timed_out = True
+                break
             current_count = DestinationSuggestionModel.suggestion_count(destination_id, category)
             remaining = max(0, SUGGESTIONS_PER_CATEGORY_LIMIT - current_count)
+            if remaining <= 0:
+                skipped_full += 1
+                continue
             try:
                 places = _search_osm_suggestions(destination_name, category)
                 sleep(1.1)
-            except requests.RequestException as exc:
+            except Exception as exc:
                 errors.append(f"{destination_name} / {category}: {exc}")
                 continue
             for place in places:
@@ -301,28 +320,38 @@ def refresh_suggestions():
                     if not DestinationSuggestionModel.suggestion_exists(destination_id, category, place["name"]):
                         skipped_new += 1
                         continue
-                was_inserted = DestinationSuggestionModel.upsert_suggestion(
-                    destination_id,
-                    category,
-                    place["name"],
-                    place["address"],
-                    place["phone"],
-                    place["opening_hours"],
-                    place["description"],
-                    place["map_url"],
-                    place["source_url"],
-                )
+                try:
+                    was_inserted = DestinationSuggestionModel.upsert_suggestion(
+                        destination_id,
+                        category,
+                        place["name"],
+                        place["address"],
+                        place["phone"],
+                        place["opening_hours"],
+                        place["description"],
+                        place["map_url"],
+                        place["source_url"],
+                    )
+                except Exception as exc:
+                    errors.append(f"{destination_name} / {category} / {place['name']}: {exc}")
+                    continue
                 if was_inserted:
                     inserted += 1
                     remaining -= 1
                 else:
                     updated += 1
+        if timed_out:
+            break
 
     message = f"Đã lấy thêm gợi ý từ OSM: thêm {inserted}, cập nhật {updated}."
     if removed_invalid:
         message += f" Đã ẩn {removed_invalid} gợi ý OSM không thuộc Việt Nam."
+    if skipped_full:
+        message += f" Bỏ qua {skipped_full} nhóm đã đủ {SUGGESTIONS_PER_CATEGORY_LIMIT} bản ghi."
     if skipped_new:
         message += f" Bỏ qua {skipped_new} gợi ý mới vì nhóm đã đủ {SUGGESTIONS_PER_CATEGORY_LIMIT} bản ghi."
+    if timed_out:
+        message += " Đã tạm dừng sớm để tránh quá tải, bấm lại để lấy tiếp."
     if errors:
         flash(message, "warning")
         flash("Một số nhóm chưa lấy được: " + "; ".join(errors[:3]), "danger")

@@ -28,6 +28,18 @@
             border-radius: 8px;
             background: #fff;
         }
+        .client-check-row {
+            display: grid;
+            grid-template-columns: 24px minmax(0, 1fr);
+            align-items: start;
+            gap: .5rem;
+        }
+        .client-checkbox {
+            width: 1.15rem;
+            height: 1.15rem;
+            min-width: 1.15rem;
+            margin: .15rem 0 0 0;
+        }
         @media (max-width: 576px) {
             .score-row { grid-template-columns: minmax(0, 1fr) 96px; }
             .score-input { max-width: none; }
@@ -84,8 +96,8 @@
                                 </div>
                                 <div class="client-check-list mb-2">
                                     {% for client in available_clients %}
-                                        <label class="form-check d-flex gap-2 align-items-start px-3 py-2 border-bottom mb-0" for="client_{{ client[0] }}">
-                                            <input class="form-check-input client-checkbox mt-1" type="checkbox" id="client_{{ client[0] }}" name="client_ids" value="{{ client[0] }}">
+                                        <label class="client-check-row px-3 py-2 border-bottom mb-0" for="client_{{ client[0] }}">
+                                            <input class="form-check-input client-checkbox" type="checkbox" id="client_{{ client[0] }}" name="client_ids" value="{{ client[0] }}">
                                             <span>
                                                 <span class="fw-semibold d-block">{{ client[1] }}</span>
                                                 {% if client[3] %}<span class="text-muted small">{{ client[3] }}</span>{% endif %}

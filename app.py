@@ -3,9 +3,10 @@ Complete App with Database Logging
 All logs stored in app_logs table
 """
 
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g, send_from_directory, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g, send_from_directory, make_response, flash
 import os
-from models import VanDongVienModel, AdminUserModel, TournamentModel, DangKyGiaiModel, DoiBongModel, MatchModel
+import random
+from models import VanDongVienModel, AdminUserModel, TournamentModel, DangKyGiaiModel, DoiBongModel, MatchModel, EntertainmentCardGameModel
 from services import FinanceService
 from knockout_logic import MatchSchedulerService
 from auth import AuthService, login_required, admin_required
@@ -213,6 +214,188 @@ def trang_chu():
         return redirect(url_for('vdv_dashboard'))
 
     return render_template('chon_cau_phan.html')
+
+
+@app.route('/giai-tri')
+@login_required
+def giai_tri():
+    user = session.get('user', {})
+    DBLogger.log_request('GET', '/giai-tri', user.get('email'))
+    return render_template('giai_tri.html', user=user)
+
+
+@app.route('/giai-tri/ghi-diem')
+@login_required
+def giai_tri_ghi_diem():
+    user = session.get('user', {})
+    DBLogger.log_request('GET', '/giai-tri/ghi-diem', user.get('email'))
+    games = EntertainmentCardGameModel.get_games()
+    return render_template('giai_tri_ghi_diem.html', user=user, games=games)
+
+
+@app.route('/giai-tri/ghi-diem/tao', methods=['POST'])
+@login_required
+def tao_van_ghi_diem():
+    user = session.get('user', {})
+    name = request.form.get('name') or 'Ván bài mới'
+    try:
+        game_id = EntertainmentCardGameModel.create_game(
+            name,
+            owner_admin_id=user.get('id') if user.get('role') == 'admin' else None,
+            created_by_role=user.get('role'),
+            created_by_client_id=user.get('id') if user.get('role') == 'vdv' else None,
+        )
+        DBLogger.log_user_action(
+            user_email=user.get('email'),
+            user_role=user.get('role'),
+            action='CREATE_ENTERTAINMENT_CARD_GAME',
+            route='/giai-tri/ghi-diem/tao',
+            method='POST',
+            status_code=302,
+            details={'game_id': game_id, 'name': name},
+        )
+        flash('Đã tạo ván ghi điểm.', 'success')
+        return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+    except Exception as e:
+        DBLogger.log_error(f"Error creating entertainment card game: {str(e)}", user.get('email'), '/giai-tri/ghi-diem/tao', context=traceback.format_exc())
+        flash('Không tạo được ván ghi điểm.', 'danger')
+        return redirect(url_for('giai_tri_ghi_diem'))
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>')
+@login_required
+def chi_tiet_van_ghi_diem(game_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    players = EntertainmentCardGameModel.get_players(game_id)
+    scoreboard = EntertainmentCardGameModel.get_scoreboard(game_id)
+    rounds = EntertainmentCardGameModel.get_rounds(game_id)
+    final_view = request.args.get('ket_thuc') == '1'
+    return render_template(
+        'giai_tri_ghi_diem_chi_tiet.html',
+        user=user,
+        game=game,
+        players=players,
+        scoreboard=scoreboard,
+        rounds=rounds,
+        final_view=final_view,
+    )
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>/nguoi-choi', methods=['POST'])
+@login_required
+def them_nguoi_choi_ghi_diem(game_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    if game[2] == 'ended':
+        flash('Ván đã kết thúc, không thêm người chơi mới được.', 'warning')
+        return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+    try:
+        player_id = EntertainmentCardGameModel.add_player(game_id, request.form.get('name'))
+        DBLogger.log_user_action(
+            user_email=user.get('email'),
+            user_role=user.get('role'),
+            action='ADD_ENTERTAINMENT_CARD_PLAYER',
+            route=f'/giai-tri/ghi-diem/{game_id}/nguoi-choi',
+            method='POST',
+            status_code=302,
+            details={'game_id': game_id, 'player_id': player_id},
+        )
+        flash('Đã thêm người chơi.', 'success')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    except Exception as e:
+        DBLogger.log_error(f"Error adding entertainment player: {str(e)}", user.get('email'), f'/giai-tri/ghi-diem/{game_id}/nguoi-choi', context=traceback.format_exc())
+        flash('Không thêm được người chơi.', 'danger')
+    return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>/tran', methods=['POST'])
+@login_required
+def ghi_diem_tran_bai(game_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    if game[2] == 'ended':
+        flash('Ván đã kết thúc, không thể ghi thêm điểm.', 'warning')
+        return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+
+    players = EntertainmentCardGameModel.get_players(game_id)
+    scores = {player[0]: request.form.get(f'score_{player[0]}', 0) for player in players}
+    starter_player_id = request.form.get('starter_player_id') or None
+    try:
+        if starter_player_id:
+            starter_player_id = int(starter_player_id)
+        round_id, round_no = EntertainmentCardGameModel.add_round(
+            game_id,
+            scores,
+            starter_player_id=starter_player_id,
+            note=request.form.get('note'),
+        )
+        DBLogger.log_user_action(
+            user_email=user.get('email'),
+            user_role=user.get('role'),
+            action='ADD_ENTERTAINMENT_CARD_ROUND',
+            route=f'/giai-tri/ghi-diem/{game_id}/tran',
+            method='POST',
+            status_code=302,
+            details={'game_id': game_id, 'round_id': round_id, 'round_no': round_no, 'scores': scores},
+        )
+        flash(f'Đã ghi điểm trận {round_no}.', 'success')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    except Exception as e:
+        DBLogger.log_error(f"Error adding entertainment round: {str(e)}", user.get('email'), f'/giai-tri/ghi-diem/{game_id}/tran', context=traceback.format_exc())
+        flash('Không ghi được điểm trận này.', 'danger')
+    return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>/chon-nguoi-danh-truoc', methods=['POST'])
+@login_required
+def chon_nguoi_danh_truoc(game_id):
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    players = EntertainmentCardGameModel.get_players(game_id)
+    if not players:
+        flash('Cần thêm người chơi trước khi xúc xắc.', 'warning')
+    else:
+        chosen = random.choice(players)
+        flash(f'Xúc xắc chọn: {chosen[1]} đánh trước.', 'success')
+    return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+
+
+@app.route('/giai-tri/ghi-diem/<int:game_id>/ket-thuc', methods=['POST'])
+@login_required
+def ket_thuc_van_ghi_diem(game_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    EntertainmentCardGameModel.end_game(game_id)
+    DBLogger.log_user_action(
+        user_email=user.get('email'),
+        user_role=user.get('role'),
+        action='END_ENTERTAINMENT_CARD_GAME',
+        route=f'/giai-tri/ghi-diem/{game_id}/ket-thuc',
+        method='POST',
+        status_code=302,
+        details={'game_id': game_id},
+    )
+    return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id, ket_thuc=1))
+
+
+@app.route('/giai-tri/ta-la')
+@login_required
+def giai_tri_ta_la():
+    user = session.get('user', {})
+    DBLogger.log_request('GET', '/giai-tri/ta-la', user.get('email'))
+    return render_template('giai_tri_ta_la.html', user=user)
 
 
 @app.route('/giai-dau')

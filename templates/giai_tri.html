@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giải trí</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include '_pwa_head.html' %}
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ '/' if user.role == 'admin' else '/vdv-dashboard' }}">← Giải trí</a>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="navbar-text text-white-50 small">{{ user.display_name or user.email }}</span>
+                <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container pb-5">
+        <div class="mb-4">
+            <h1 class="fw-bold mb-1">Giải trí</h1>
+            <p class="text-muted mb-0">Các công cụ chơi nhóm, ghi điểm và quản lý bàn chơi.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <a class="text-decoration-none text-reset" href="/giai-tri/ghi-diem">
+                    <section class="card h-100 shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="fs-2">🃏</div>
+                                <div>
+                                    <h2 class="h4 fw-bold mb-2">Ghi điểm đánh bài</h2>
+                                    <p class="text-muted mb-3">Thêm người chơi, ghi điểm từng trận, xúc xắc chọn người đánh trước và xem bảng xếp hạng cuối ván.</p>
+                                    <span class="btn btn-primary">Mở ghi điểm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </a>
+            </div>
+            <div class="col-md-6">
+                <a class="text-decoration-none text-reset" href="/giai-tri/ta-la">
+                    <section class="card h-100 shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="fs-2">♠️</div>
+                                <div>
+                                    <h2 class="h4 fw-bold mb-2">Bàn Tá lả</h2>
+                                    <p class="text-muted mb-3">Khung luật và bảng tính hệ số điểm theo cược nền: nhất, nhì, ba, bét, móm, ăn chốt và ù.</p>
+                                    <span class="btn btn-outline-primary">Xem luật tính điểm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% include '_pwa_register.html' %}
+{% include '_interaction_feedback.html' %}
+</body>
+</html>

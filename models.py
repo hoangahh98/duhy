@@ -842,4 +842,165 @@ class MatchModel:
         return sorted(bang.values(), key=lambda x: (-x["diem"], -x["hieu_so"]))
 
 
+class EntertainmentCardGameModel:
+    @staticmethod
+    def create_game(name, owner_admin_id=None, created_by_role=None, created_by_client_id=None):
+        game_name = (name or "").strip() or "Ghi điểm đánh bài"
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO entertainment_card_games (
+                    name, owner_admin_id, created_by_role, created_by_client_id
+                )
+                VALUES (%s, %s, %s, %s)
+                RETURNING id;
+            """, (game_name, owner_admin_id, created_by_role, created_by_client_id))
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def get_games(limit=50):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT g.id, g.name, g.status, g.created_at, g.ended_at,
+                       COUNT(DISTINCT p.id) AS player_count,
+                       COUNT(DISTINCT r.id) AS round_count
+                FROM entertainment_card_games g
+                LEFT JOIN entertainment_card_players p ON p.game_id = g.id AND p.active = TRUE
+                LEFT JOIN entertainment_card_rounds r ON r.game_id = g.id
+                GROUP BY g.id
+                ORDER BY
+                    CASE WHEN g.status = 'active' THEN 0 ELSE 1 END,
+                    g.created_at DESC
+                LIMIT %s;
+            """, (limit,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_game(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, name, status, owner_admin_id, created_by_role,
+                       created_by_client_id, created_at, ended_at
+                FROM entertainment_card_games
+                WHERE id = %s;
+            """, (game_id,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def get_players(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, name, user_client_id, active, created_at
+                FROM entertainment_card_players
+                WHERE game_id = %s AND active = TRUE
+                ORDER BY id ASC;
+            """, (game_id,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def add_player(game_id, name):
+        player_name = (name or "").strip()
+        if not player_name:
+            raise ValueError("Tên người chơi không được để trống.")
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO entertainment_card_players (game_id, name)
+                VALUES (%s, %s)
+                RETURNING id;
+            """, (game_id, player_name))
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def add_round(game_id, scores, starter_player_id=None, note=""):
+        clean_scores = []
+        for player_id, score in scores.items():
+            try:
+                clean_scores.append((int(player_id), int(score or 0)))
+            except (TypeError, ValueError):
+                raise ValueError("Điểm từng người phải là số nguyên.")
+        if not clean_scores:
+            raise ValueError("Cần ít nhất 1 người chơi để ghi điểm.")
+
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                SELECT COALESCE(MAX(round_no), 0) + 1
+                FROM entertainment_card_rounds
+                WHERE game_id = %s;
+            """, (game_id,))
+            round_no = cursor.fetchone()[0]
+
+            cursor.execute("""
+                INSERT INTO entertainment_card_rounds (game_id, round_no, starter_player_id, note)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id;
+            """, (game_id, round_no, starter_player_id, (note or "").strip()))
+            round_id = cursor.fetchone()[0]
+
+            for player_id, score in clean_scores:
+                cursor.execute("""
+                    INSERT INTO entertainment_card_scores (round_id, player_id, score)
+                    VALUES (%s, %s, %s);
+                """, (round_id, player_id, score))
+            return round_id, round_no
+
+    @staticmethod
+    def get_scoreboard(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT p.id, p.name,
+                       COALESCE(SUM(s.score), 0) AS total_score,
+                       COUNT(s.id) AS scored_rounds
+                FROM entertainment_card_players p
+                LEFT JOIN entertainment_card_scores s ON s.player_id = p.id
+                LEFT JOIN entertainment_card_rounds r ON r.id = s.round_id AND r.game_id = p.game_id
+                WHERE p.game_id = %s AND p.active = TRUE
+                GROUP BY p.id, p.name
+                ORDER BY total_score DESC, p.name ASC;
+            """, (game_id,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_rounds(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT r.id, r.round_no, r.note, r.created_at,
+                       sp.name AS starter_name,
+                       p.name AS player_name,
+                       s.score
+                FROM entertainment_card_rounds r
+                LEFT JOIN entertainment_card_players sp ON sp.id = r.starter_player_id
+                LEFT JOIN entertainment_card_scores s ON s.round_id = r.id
+                LEFT JOIN entertainment_card_players p ON p.id = s.player_id
+                WHERE r.game_id = %s
+                ORDER BY r.round_no DESC, p.id ASC;
+            """, (game_id,))
+            rows = cursor.fetchall()
+
+        rounds = []
+        by_round = {}
+        for row in rows:
+            round_id = row[0]
+            if round_id not in by_round:
+                by_round[round_id] = {
+                    "id": round_id,
+                    "round_no": row[1],
+                    "note": row[2],
+                    "created_at": row[3],
+                    "starter_name": row[4],
+                    "scores": [],
+                }
+                rounds.append(by_round[round_id])
+            if row[5] is not None:
+                by_round[round_id]["scores"].append({"player_name": row[5], "score": row[6]})
+        return rounds
+
+    @staticmethod
+    def end_game(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                UPDATE entertainment_card_games
+                SET status = 'ended', ended_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+            """, (game_id,))
+
+
 VanDongVienModel = UserClientModel

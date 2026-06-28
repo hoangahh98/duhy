@@ -365,6 +365,56 @@ ON doi_bong_khoan_chi (doi_bong_id, thang, ngay_chi);
 
 CREATE INDEX IF NOT EXISTS idx_doi_bong_admin_quyen_admin
 ON doi_bong_admin_quyen (admin_id, doi_bong_id);
+
+CREATE TABLE IF NOT EXISTS entertainment_card_games (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL DEFAULT 'Ghi điểm đánh bài',
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    owner_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by_role VARCHAR(50),
+    created_by_client_id INTEGER REFERENCES user_clients(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entertainment_card_players (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES entertainment_card_games(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    user_client_id INTEGER REFERENCES user_clients(id) ON DELETE SET NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entertainment_card_rounds (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES entertainment_card_games(id) ON DELETE CASCADE,
+    round_no INTEGER NOT NULL,
+    note TEXT DEFAULT '',
+    starter_player_id INTEGER REFERENCES entertainment_card_players(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (game_id, round_no)
+);
+
+CREATE TABLE IF NOT EXISTS entertainment_card_scores (
+    id SERIAL PRIMARY KEY,
+    round_id INTEGER NOT NULL REFERENCES entertainment_card_rounds(id) ON DELETE CASCADE,
+    player_id INTEGER NOT NULL REFERENCES entertainment_card_players(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (round_id, player_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_card_games_status
+ON entertainment_card_games (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_card_players_game
+ON entertainment_card_players (game_id, active, name);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_card_rounds_game
+ON entertainment_card_rounds (game_id, round_no DESC);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_card_scores_round
+ON entertainment_card_scores (round_id, player_id);
 """
 
 

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ game[1] }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .rank-card { border-left: 5px solid #0d6efd; }
+        .rank-card.positive { border-left-color: #198754; }
+        .rank-card.negative { border-left-color: #dc3545; }
+        .score-input { max-width: 120px; }
+        @media (max-width: 576px) {
+            .score-row { align-items: stretch !important; }
+            .score-input { max-width: none; }
+        }
+    </style>
+    {% include '_pwa_head.html' %}
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/giai-tri/ghi-diem">← {{ game[1] }}</a>
+            <span class="badge {{ 'bg-success' if game[2] == 'active' else 'bg-secondary' }}">{{ 'Đang chơi' if game[2] == 'active' else 'Đã kết thúc' }}</span>
+        </div>
+    </nav>
+
+    <main class="container pb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if final_view %}
+            <section class="alert alert-primary shadow-sm">
+                <h1 class="h4 fw-bold">Bảng xếp hạng cuối ván</h1>
+                <p class="mb-0">Chúc mừng người có điểm dương. Người điểm âm hôm nay hơi đau ví, mai gỡ lại.</p>
+            </section>
+        {% endif %}
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <section class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h2 class="h5 fw-bold mb-3">Người chơi</h2>
+                        {% if game[2] == 'active' %}
+                        <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/nguoi-choi" class="d-flex gap-2 mb-3">
+                            <input class="form-control" name="name" placeholder="Tên người chơi" required>
+                            <button class="btn btn-primary" type="submit">Thêm</button>
+                        </form>
+                        {% endif %}
+                        {% if players %}
+                            <ul class="list-group list-group-flush">
+                                {% for player in players %}
+                                    <li class="list-group-item px-0">{{ player[1] }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="alert alert-info mb-0">Thêm người chơi để bắt đầu ghi điểm.</div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h2 class="h5 fw-bold mb-3">Xúc xắc chọn lượt</h2>
+                        <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/chon-nguoi-danh-truoc">
+                            <button class="btn btn-outline-danger w-100" type="submit">🎲 Chọn người đánh trước</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-lg-8">
+                <section class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
+                                <p class="text-muted small mb-0">Tổng điểm tự cộng từ các trận đã ghi.</p>
+                            </div>
+                            {% if game[2] == 'active' and players %}
+                            <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/ket-thuc">
+                                <button class="btn btn-warning" type="submit">Kết thúc ván</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% if scoreboard %}
+                            <div class="row g-2">
+                                {% for row in scoreboard %}
+                                    <div class="col-md-6">
+                                        <div class="card rank-card {{ 'positive' if row[2] > 0 else ('negative' if row[2] < 0 else '') }}">
+                                            <div class="card-body py-3">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <div class="fw-bold">#{{ loop.index }} {{ row[1] }}</div>
+                                                        <div class="text-muted small">{{ row[3] }} trận đã ghi điểm</div>
+                                                    </div>
+                                                    <div class="fs-4 fw-bold {{ 'text-success' if row[2] > 0 else ('text-danger' if row[2] < 0 else 'text-muted') }}">{{ row[2] }}</div>
+                                                </div>
+                                                {% if final_view %}
+                                                    <div class="small mt-2 {{ 'text-success' if row[2] > 0 else ('text-danger' if row[2] < 0 else 'text-muted') }}">
+                                                        {{ 'Chúc mừng, hôm nay đang lời điểm.' if row[2] > 0 else ('Chia buồn, hôm nay đang âm điểm.' if row[2] < 0 else 'Hòa vốn, không vui không buồn.') }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">Chưa có điểm để xếp hạng.</div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {% if game[2] == 'active' and players %}
+                <section class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h2 class="h5 fw-bold mb-3">Ghi điểm trận mới</h2>
+                        <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/tran">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold" for="starter_player_id">Người đánh trước</label>
+                                <select class="form-select" id="starter_player_id" name="starter_player_id">
+                                    <option value="">Không ghi</option>
+                                    {% for player in players %}
+                                        <option value="{{ player[0] }}">{{ player[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% for player in players %}
+                                <div class="score-row d-flex justify-content-between align-items-center gap-3 mb-2">
+                                    <label class="fw-semibold" for="score_{{ player[0] }}">{{ player[1] }}</label>
+                                    <input class="form-control score-input" id="score_{{ player[0] }}" name="score_{{ player[0] }}" type="number" step="1" value="0">
+                                </div>
+                            {% endfor %}
+                            <label class="form-label fw-semibold mt-2" for="note">Ghi chú trận</label>
+                            <input class="form-control mb-3" id="note" name="note" placeholder="Ví dụ: ván ù, ăn chốt, móm...">
+                            <button class="btn btn-success" type="submit">Lưu điểm trận</button>
+                        </form>
+                    </div>
+                </section>
+                {% endif %}
+
+                <section class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h2 class="h5 fw-bold mb-3">Lịch sử trận</h2>
+                        {% if rounds %}
+                            <div class="accordion" id="roundHistory">
+                                {% for round in rounds %}
+                                <div class="accordion-item">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#round{{ round.id }}">
+                                            Trận {{ round.round_no }}{% if round.starter_name %} · {{ round.starter_name }} đánh trước{% endif %}
+                                        </button>
+                                    </h3>
+                                    <div id="round{{ round.id }}" class="accordion-collapse collapse" data-bs-parent="#roundHistory">
+                                        <div class="accordion-body">
+                                            {% if round.note %}<p class="text-muted">{{ round.note }}</p>{% endif %}
+                                            <div class="d-flex flex-wrap gap-2">
+                                                {% for score in round.scores %}
+                                                    <span class="badge text-bg-light border">{{ score.player_name }}: {{ score.score }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info mb-0">Chưa ghi trận nào.</div>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% include '_pwa_register.html' %}
+{% include '_interaction_feedback.html' %}
+</body>
+</html>

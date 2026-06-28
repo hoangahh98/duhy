@@ -294,6 +294,34 @@ class DestinationSuggestionModel:
             return cursor.fetchall()
 
     @staticmethod
+    def destinations_used_by_trips(admin_id=None):
+        with db_cursor() as cursor:
+            if admin_id:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT d.id, d.name
+                    FROM trips t
+                    INNER JOIN travel_destinations d ON t.destination_id = d.id
+                    LEFT JOIN trip_admin_permissions p ON t.id = p.trip_id AND p.admin_id = %s
+                    WHERE d.active = TRUE
+                      AND (t.owner_admin_id = %s OR p.admin_id IS NOT NULL)
+                    ORDER BY d.name ASC;
+                    """,
+                    (admin_id, admin_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT DISTINCT d.id, d.name
+                    FROM trips t
+                    INNER JOIN travel_destinations d ON t.destination_id = d.id
+                    WHERE d.active = TRUE
+                    ORDER BY d.name ASC;
+                    """
+                )
+            return cursor.fetchall()
+
+    @staticmethod
     def destination(destination_id):
         if not destination_id:
             return None
@@ -350,6 +378,77 @@ class DestinationSuggestionModel:
         for row in DestinationSuggestionModel.suggestions(destination_id=destination_id):
             grouped.setdefault(row[3], []).append(row)
         return grouped
+
+    @staticmethod
+    def suggestion_count(destination_id, category):
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(1)
+                FROM travel_suggestions
+                WHERE destination_id = %s AND category = %s AND active = TRUE;
+                """,
+                (destination_id, category),
+            )
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def suggestion_exists(destination_id, category, name):
+        with db_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 1
+                FROM travel_suggestions
+                WHERE destination_id = %s
+                  AND category = %s
+                  AND lower(name) = lower(%s)
+                LIMIT 1;
+                """,
+                (destination_id, category, (name or "").strip()),
+            )
+            return cursor.fetchone() is not None
+
+    @staticmethod
+    def upsert_suggestion(destination_id, category, name, address="", phone="", opening_hours="", description="", map_url="", source_url=""):
+        if not DestinationSuggestionModel.destination(destination_id):
+            raise ValueError("Địa danh không hợp lệ")
+        if category not in DestinationSuggestionModel.categories():
+            raise ValueError("Loại gợi ý không hợp lệ")
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("Tên gợi ý là bắt buộc")
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO travel_suggestions (
+                    destination_id, category, name, address, phone, opening_hours,
+                    description, map_url, source_url, active
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                ON CONFLICT (destination_id, category, name) DO UPDATE SET
+                    address = COALESCE(NULLIF(EXCLUDED.address, ''), travel_suggestions.address),
+                    phone = COALESCE(NULLIF(EXCLUDED.phone, ''), travel_suggestions.phone),
+                    opening_hours = COALESCE(NULLIF(EXCLUDED.opening_hours, ''), travel_suggestions.opening_hours),
+                    description = COALESCE(NULLIF(EXCLUDED.description, ''), travel_suggestions.description),
+                    map_url = COALESCE(NULLIF(EXCLUDED.map_url, ''), travel_suggestions.map_url),
+                    source_url = COALESCE(NULLIF(EXCLUDED.source_url, ''), travel_suggestions.source_url),
+                    active = TRUE,
+                    updated_at = CURRENT_TIMESTAMP
+                RETURNING (xmax = 0) AS inserted;
+                """,
+                (
+                    destination_id,
+                    category,
+                    name,
+                    (address or "").strip(),
+                    (phone or "").strip(),
+                    (opening_hours or "").strip(),
+                    (description or "").strip(),
+                    (map_url or "").strip(),
+                    (source_url or "").strip(),
+                ),
+            )
+            return cursor.fetchone()[0]
 
     @staticmethod
     def create_suggestion(destination_id, category, name, address="", phone="", opening_hours="", description="", map_url="", source_url=""):

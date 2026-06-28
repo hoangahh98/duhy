@@ -1,6 +1,9 @@
 from datetime import date
 from secrets import token_urlsafe
+from time import sleep
+from urllib.parse import quote_plus
 
+import requests
 from flask import Flask, flash, redirect, render_template, request, send_from_directory, session, url_for
 
 from .auth import AuthService, admin_required, login_required
@@ -12,6 +15,81 @@ app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
 
 EXPENSE_CATEGORIES = ("Khách sạn", "Ẩm thực", "Vui chơi", "Thể thao", "Khám phá", "Khác")
+SUGGESTIONS_PER_CATEGORY_LIMIT = 10
+OSM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
+OSM_USER_AGENT = "duhy-travel-suggestions/1.0"
+OSM_CATEGORY_TERMS = {
+    "Quán ăn ngon": "restaurant",
+    "Cà phê đẹp": "cafe",
+    "Vui chơi": "amusement attraction",
+    "Khám phá": "tourist attraction",
+    "Thể thao": "sports",
+    "Khác": "travel attraction",
+}
+
+
+def _osm_source_url(result):
+    osm_type = (result.get("osm_type") or "").lower()
+    osm_id = result.get("osm_id")
+    if osm_type in {"node", "way", "relation"} and osm_id:
+        return f"https://www.openstreetmap.org/{osm_type}/{osm_id}"
+    return ""
+
+
+def _normalize_osm_result(result):
+    extratags = result.get("extratags") or {}
+    namedetails = result.get("namedetails") or {}
+    display_name = result.get("display_name") or ""
+    name = (
+        result.get("name")
+        or namedetails.get("name:vi")
+        or namedetails.get("name")
+        or display_name.split(",", 1)[0].strip()
+    )
+    if not name:
+        return None
+    phone = extratags.get("phone") or extratags.get("contact:phone") or ""
+    opening_hours = extratags.get("opening_hours") or ""
+    source_url = _osm_source_url(result)
+    return {
+        "name": name,
+        "address": display_name,
+        "phone": phone,
+        "opening_hours": opening_hours,
+        "description": "Tự lấy từ OpenStreetMap. Vui lòng kiểm tra lại trước khi dùng.",
+        "map_url": source_url or f"https://www.openstreetmap.org/search?query={quote_plus(display_name or name)}",
+        "source_url": source_url,
+    }
+
+
+def _search_osm_suggestions(destination_name, category):
+    response = requests.get(
+        OSM_SEARCH_URL,
+        params={
+            "format": "jsonv2",
+            "q": f"{OSM_CATEGORY_TERMS[category]} in {destination_name}, Vietnam",
+            "limit": SUGGESTIONS_PER_CATEGORY_LIMIT,
+            "addressdetails": 1,
+            "extratags": 1,
+            "namedetails": 1,
+            "accept-language": "vi",
+        },
+        headers={"User-Agent": OSM_USER_AGENT},
+        timeout=15,
+    )
+    response.raise_for_status()
+    places = []
+    seen = set()
+    for result in response.json():
+        place = _normalize_osm_result(result)
+        if not place:
+            continue
+        dedupe_key = place["name"].strip().lower()
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        places.append(place)
+    return places
 
 with app.app_context():
     init_schema()
@@ -121,6 +199,61 @@ def add_suggestion():
         flash("Đã thêm gợi ý.", "success")
     except Exception as exc:
         flash(f"Không thêm được gợi ý: {exc}", "danger")
+    return redirect(url_for("suggestions"))
+
+
+@app.route("/goi-y/lay-them", methods=["POST"])
+@admin_required
+def refresh_suggestions():
+    destinations = DestinationSuggestionModel.destinations_used_by_trips(admin_scope_id(session["user"]))
+    if not destinations:
+        flash("Chưa có chuyến đi nào chọn địa danh để lấy thêm gợi ý.", "warning")
+        return redirect(url_for("suggestions"))
+
+    inserted = 0
+    updated = 0
+    skipped_new = 0
+    errors = []
+    for destination_id, destination_name in destinations:
+        for category in DestinationSuggestionModel.categories():
+            current_count = DestinationSuggestionModel.suggestion_count(destination_id, category)
+            remaining = max(0, SUGGESTIONS_PER_CATEGORY_LIMIT - current_count)
+            try:
+                places = _search_osm_suggestions(destination_name, category)
+                sleep(1.1)
+            except requests.RequestException as exc:
+                errors.append(f"{destination_name} / {category}: {exc}")
+                continue
+            for place in places:
+                if remaining <= 0:
+                    if not DestinationSuggestionModel.suggestion_exists(destination_id, category, place["name"]):
+                        skipped_new += 1
+                        continue
+                was_inserted = DestinationSuggestionModel.upsert_suggestion(
+                    destination_id,
+                    category,
+                    place["name"],
+                    place["address"],
+                    place["phone"],
+                    place["opening_hours"],
+                    place["description"],
+                    place["map_url"],
+                    place["source_url"],
+                )
+                if was_inserted:
+                    inserted += 1
+                    remaining -= 1
+                else:
+                    updated += 1
+
+    message = f"Đã lấy thêm gợi ý từ OSM: thêm {inserted}, cập nhật {updated}."
+    if skipped_new:
+        message += f" Bỏ qua {skipped_new} gợi ý mới vì nhóm đã đủ {SUGGESTIONS_PER_CATEGORY_LIMIT} bản ghi."
+    if errors:
+        flash(message, "warning")
+        flash("Một số nhóm chưa lấy được: " + "; ".join(errors[:3]), "danger")
+    else:
+        flash(message, "success")
     return redirect(url_for("suggestions"))
 
 

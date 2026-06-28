@@ -1,7 +1,7 @@
 {
-  "name": "Pickleball Tournament Manager",
-  "short_name": "Pickleball",
-  "description": "Quản lý giải đấu pickleball, vận động viên, lịch thi đấu và điểm số.",
+  "name": "Vô địch",
+  "short_name": "Vô địch",
+  "description": "Quản lý giải đấu, vận động viên, lịch thi đấu, điểm số và thu chi.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

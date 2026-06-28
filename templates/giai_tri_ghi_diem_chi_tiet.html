@@ -11,6 +11,16 @@
         .rank-card.positive { border-left-color: #198754; }
         .rank-card.negative { border-left-color: #dc3545; }
         .score-input { max-width: 120px; }
+        .score-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 120px;
+            align-items: center;
+            gap: .75rem;
+        }
+        .score-player-name {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
         .client-check-list {
             max-height: 260px;
             overflow-y: auto;
@@ -19,7 +29,7 @@
             background: #fff;
         }
         @media (max-width: 576px) {
-            .score-row { align-items: stretch !important; }
+            .score-row { grid-template-columns: minmax(0, 1fr) 96px; }
             .score-input { max-width: none; }
         }
     </style>
@@ -94,7 +104,14 @@
                         {% if players %}
                             <ul class="list-group list-group-flush">
                                 {% for player in players %}
-                                    <li class="list-group-item px-0">{{ player[1] }}</li>
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                                        <span class="fw-semibold text-break">{{ player[1] }}</span>
+                                        {% if game[2] == 'active' %}
+                                        <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/nguoi-choi/{{ player[0] }}/roi-van" onsubmit="return confirm({{ ('Bỏ ' ~ player[1] ~ ' khỏi các trận mới? Điểm đã ghi của người này vẫn được giữ trong lịch sử.')|tojson }});">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" data-loading-text="Đang bỏ...">Rời ván</button>
+                                        </form>
+                                        {% endif %}
+                                    </li>
                                 {% endfor %}
                             </ul>
                         {% else %}
@@ -120,8 +137,8 @@
                         <h2 class="h5 fw-bold mb-3">Ghi điểm trận mới</h2>
                         <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/tran" id="scoreRoundForm" data-feedback="off">
                             {% for player in players %}
-                                <div class="score-row d-flex justify-content-between align-items-center gap-3 mb-2">
-                                    <label class="fw-semibold" for="score_{{ player[0] }}">{{ player[1] }}</label>
+                                <div class="score-row mb-2">
+                                    <label class="fw-semibold score-player-name" for="score_{{ player[0] }}">{{ player[1] }}</label>
                                     <input class="form-control score-input round-score-input" id="score_{{ player[0] }}" name="score_{{ player[0] }}" type="number" step="1" value="0">
                                 </div>
                             {% endfor %}
@@ -140,7 +157,7 @@
                         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                             <div>
                                 <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
-                                <p class="text-muted small mb-0">Tổng điểm tự cộng từ các trận đã ghi.</p>
+                                <p class="text-muted small mb-0">Tổng điểm tự cộng từ các trận đã ghi. Người đã rời ván vẫn giữ điểm cũ.</p>
                             </div>
                             {% if game[2] == 'active' and players %}
                             <form method="post" action="/giai-tri/ghi-diem/{{ game[0] }}/ket-thuc">
@@ -157,7 +174,7 @@
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fw-bold">#{{ loop.index }} {{ row[1] }}</div>
-                                                        <div class="text-muted small">{{ row[3] }} trận đã ghi điểm</div>
+                                                        <div class="text-muted small">{{ row[3] }} trận đã ghi điểm{% if not row[4] %} · Đã rời ván{% endif %}</div>
                                                     </div>
                                                     <div class="fs-4 fw-bold {{ 'text-success' if row[2] > 0 else ('text-danger' if row[2] < 0 else 'text-muted') }}">{{ row[2] }}</div>
                                                 </div>

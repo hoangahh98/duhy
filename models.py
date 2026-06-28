@@ -912,6 +912,16 @@ class EntertainmentCardGameModel:
             return cursor.fetchall()
 
     @staticmethod
+    def deactivate_player(game_id, player_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                UPDATE entertainment_card_players
+                SET active = FALSE
+                WHERE game_id = %s AND id = %s AND active = TRUE;
+            """, (game_id, player_id))
+            return cursor.rowcount
+
+    @staticmethod
     def get_available_clients(game_id):
         with db_cursor() as cursor:
             cursor.execute("""
@@ -939,6 +949,16 @@ class EntertainmentCardGameModel:
             client = cursor.fetchone()
             if not client:
                 raise ValueError("Không tìm thấy người chơi trong danh sách client.")
+
+            cursor.execute("""
+                UPDATE entertainment_card_players
+                SET active = TRUE, name = %s
+                WHERE game_id = %s AND user_client_id = %s AND active = FALSE
+                RETURNING id;
+            """, (client[0], game_id, user_client_id))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
 
             cursor.execute("""
                 INSERT INTO entertainment_card_players (game_id, name, user_client_id)
@@ -990,13 +1010,14 @@ class EntertainmentCardGameModel:
             cursor.execute("""
                 SELECT p.id, p.name,
                        COALESCE(SUM(s.score), 0) AS total_score,
-                       COUNT(s.id) AS scored_rounds
+                       COUNT(s.id) AS scored_rounds,
+                       p.active
                 FROM entertainment_card_players p
                 LEFT JOIN entertainment_card_scores s ON s.player_id = p.id
                 LEFT JOIN entertainment_card_rounds r ON r.id = s.round_id AND r.game_id = p.game_id
-                WHERE p.game_id = %s AND p.active = TRUE
-                GROUP BY p.id, p.name
-                ORDER BY total_score DESC, p.name ASC;
+                WHERE p.game_id = %s
+                GROUP BY p.id, p.name, p.active
+                ORDER BY total_score DESC, p.active DESC, p.name ASC;
             """, (game_id,))
             return cursor.fetchall()
 

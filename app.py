@@ -459,6 +459,37 @@ def them_nguoi_choi_ghi_diem(game_id):
     return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
 
 
+@app.route('/giai-tri/ghi-diem/<int:game_id>/nguoi-choi/<int:player_id>/roi-van', methods=['POST'])
+@login_required
+def roi_van_nguoi_choi_ghi_diem(game_id, player_id):
+    user = session.get('user', {})
+    game = EntertainmentCardGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy ván ghi điểm", 404
+    if game[2] == 'ended':
+        flash('Ván đã kết thúc, không thể thay đổi người chơi.', 'warning')
+        return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+    try:
+        updated = EntertainmentCardGameModel.deactivate_player(game_id, player_id)
+        if updated:
+            DBLogger.log_user_action(
+                user_email=user.get('email'),
+                user_role=user.get('role'),
+                action='DEACTIVATE_ENTERTAINMENT_CARD_PLAYER',
+                route=f'/giai-tri/ghi-diem/{game_id}/nguoi-choi/{player_id}/roi-van',
+                method='POST',
+                status_code=302,
+                details={'game_id': game_id, 'player_id': player_id},
+            )
+            flash('Đã bỏ người chơi khỏi các trận mới. Điểm cũ vẫn được giữ trong lịch sử.', 'success')
+        else:
+            flash('Không tìm thấy người chơi đang active trong ván.', 'warning')
+    except Exception as e:
+        DBLogger.log_error(f"Error deactivating entertainment player: {str(e)}", user.get('email'), f'/giai-tri/ghi-diem/{game_id}/nguoi-choi/{player_id}/roi-van', context=traceback.format_exc())
+        flash('Không bỏ được người chơi khỏi ván.', 'danger')
+    return redirect(url_for('chi_tiet_van_ghi_diem', game_id=game_id))
+
+
 @app.route('/giai-tri/ghi-diem/<int:game_id>/tran', methods=['POST'])
 @login_required
 def ghi_diem_tran_bai(game_id):

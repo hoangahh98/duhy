@@ -1065,11 +1065,25 @@ def build_summary(members, expenses):
     paid_enough_targets = {}
     for member in members:
         member_id = member[0]
-        member_advanced[member_id] = max(member_paid_total.get(member_id, Decimal("0")) - member_spent.get(member_id, Decimal("0")), Decimal("0"))
         paid_enough_targets[member_id] = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")), Decimal("0"))
+    gross_credit = {
+        member_id: max(member_paid_total.get(member_id, Decimal("0")) - member_spent.get(member_id, Decimal("0")), Decimal("0"))
+        for member_id in member_spent
+    }
+    remaining_collected = total_collected
+    for member in members:
+        member_id = member[0]
+        if gross_credit.get(member_id, Decimal("0")) <= 0:
+            member_advanced[member_id] = Decimal("0")
+            continue
+        offset = min(gross_credit[member_id], remaining_collected)
+        member_advanced[member_id] = gross_credit[member_id] - offset
+        remaining_collected -= offset
     balances = {}
     for member in members:
-        balances[member[0]] = money(member[4]) + member_paid_total.get(member[0], Decimal("0")) - member_spent.get(member[0], Decimal("0"))
+        member_id = member[0]
+        debt = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")) - money(member[4]), Decimal("0"))
+        balances[member_id] = member_advanced.get(member_id, Decimal("0")) - debt
     total_advanced = max(total_spent - total_collected, Decimal("0"))
     debtors = [
         {"member_id": member_id, "name": member_names.get(member_id, ""), "amount": -balance}
@@ -1079,7 +1093,7 @@ def build_summary(members, expenses):
     creditors = [
         {"member_id": member_id, "name": member_names.get(member_id, ""), "remaining": balance}
         for member_id, balance in balances.items()
-        if balance > 0 and member_paid_total.get(member_id, Decimal("0")) > 0
+        if balance > 0
     ]
     payment_suggestions = []
     creditor_index = 0

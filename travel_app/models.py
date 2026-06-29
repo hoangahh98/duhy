@@ -1064,9 +1064,11 @@ def build_summary(members, expenses, treasurer_member_id=None):
         member_id = member[0]
         paid_enough_targets[member_id] = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")), Decimal("0"))
     effective_collected = {}
+    actual_collected = {}
     for member in members:
         member_id = member[0]
         collected = money(member[4])
+        actual_collected[member_id] = collected
         if treasurer_member_id and member_id == treasurer_member_id:
             collected = member_spent.get(member_id, Decimal("0"))
         effective_collected[member_id] = collected
@@ -1075,7 +1077,13 @@ def build_summary(members, expenses, treasurer_member_id=None):
         member_id: max(member_paid_total.get(member_id, Decimal("0")) - member_spent.get(member_id, Decimal("0")), Decimal("0"))
         for member_id in member_spent
     }
-    remaining_collected = total_collected
+    reimbursement_pool = Decimal("0")
+    for member in members:
+        member_id = member[0]
+        if treasurer_member_id and member_id == treasurer_member_id:
+            continue
+        reimbursement_pool += actual_collected.get(member_id, Decimal("0"))
+    remaining_collected = reimbursement_pool
     for member in members:
         member_id = member[0]
         if gross_credit.get(member_id, Decimal("0")) <= 0:
@@ -1089,7 +1097,7 @@ def build_summary(members, expenses, treasurer_member_id=None):
         member_id = member[0]
         debt = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")) - effective_collected.get(member_id, Decimal("0")), Decimal("0"))
         balances[member_id] = member_advanced.get(member_id, Decimal("0")) - debt
-    total_advanced = max(total_spent - total_collected, Decimal("0"))
+    total_advanced = sum(member_advanced.values(), Decimal("0"))
     debtors = [
         {"member_id": member_id, "name": member_names.get(member_id, ""), "amount": -balance}
         for member_id, balance in balances.items()
@@ -1129,6 +1137,8 @@ def build_summary(members, expenses, treasurer_member_id=None):
         "member_advanced": member_advanced,
         "member_paid_total": member_paid_total,
         "effective_collected": effective_collected,
+        "actual_collected": actual_collected,
+        "reimbursement_pool": reimbursement_pool,
         "paid_enough_targets": paid_enough_targets,
         "balances": balances,
         "payment_suggestions": payment_suggestions,

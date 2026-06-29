@@ -70,7 +70,7 @@
     </div>
     <div class="row g-3 mb-3">
         <div class="col-md-3"><div class="card h-100"><div class="card-body text-center"><div class="small text-muted">Tổng thu</div><div class="fw-bold fs-4 text-primary">{{ summary.total_collected|vnd }}đ</div></div></div></div>
-        <div class="col-md-3"><div class="card h-100"><div class="card-body text-center"><div class="small text-muted">Tổng ứng trước</div><div class="fw-bold fs-4 text-success">{{ summary.total_advanced|vnd }}đ</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body text-center"><div class="small text-muted">Tổng ứng trước</div><div class="fw-bold fs-4 text-success">{{ summary.total_advanced|vnd }}đ</div><div class="small text-muted">Tổng các khoản ứng còn lại</div></div></div></div>
         <div class="col-md-3"><div class="card h-100"><div class="card-body text-center"><div class="small text-muted">Tổng chi</div><div class="fw-bold fs-4 text-danger">{{ summary.total_spent|vnd }}đ</div></div></div></div>
         <div class="col-md-3"><div class="card h-100"><div class="card-body text-center"><div class="small text-muted">Còn lại</div><div class="fw-bold fs-4 {{ 'text-success' if summary.balance >= 0 else 'text-danger' }}">{{ summary.balance|vnd }}đ</div></div></div></div>
     </div>

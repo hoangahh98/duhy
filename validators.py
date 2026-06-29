@@ -72,7 +72,14 @@ def _estimated_team_count(loai_dau, so_nguoi_du_kien):
 
 
 def _parse_money_field(value):
-    return _parse_int_field(value, 0, minimum=0)
+    raw = str(value or "").strip()
+    if raw == "":
+        return 0
+    cleaned = re.sub(r"[^\d-]", "", raw)
+    if cleaned in {"", "-"}:
+        return 0
+    number = int(cleaned)
+    return max(0, number)
 
 
 def _normalize_tournament_form_legacy(form):

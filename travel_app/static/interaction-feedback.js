@@ -19,13 +19,11 @@
             return;
         }
 
-        window.setTimeout(function() {
-            if (event.defaultPrevented) {
-                return;
-            }
-            const submitter = event.submitter || form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
-            markBusy(submitter, submitter && submitter.dataset.loadingText ? submitter.dataset.loadingText : 'Đang xử lý...');
-        }, 0);
+        if (event.defaultPrevented) {
+            return;
+        }
+        const submitter = event.submitter || form.querySelector('button[type="submit"], input[type="submit"], button:not([type])');
+        markBusy(submitter, submitter && submitter.dataset.loadingText ? submitter.dataset.loadingText : 'Đang xử lý...');
     });
 
     document.addEventListener('click', function(event) {

@@ -386,21 +386,21 @@ BTC</textarea>
                             <div class="row g-2">
                                 <div class="col-4">
                                     <label class="form-label small mb-1">Nhất</label>
-                                    <input type="number" name="tien_giai_1" class="form-control form-control-sm" min="0"
-                                           value="{{ giai.tien_giai_1|int if giai.tien_giai_1 is not none else '' }}"
-                                           placeholder="{{ giai.giai_1|int }}">
+                                    <input type="text" name="tien_giai_1" class="form-control form-control-sm money-input" inputmode="decimal"
+                                           value="{{ '{:,.0f}'.format(giai.tien_giai_1) if giai.tien_giai_1 is not none else '' }}"
+                                           placeholder="{{ '{:,.0f}'.format(giai.giai_1) }}">
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label small mb-1">Nhì</label>
-                                    <input type="number" name="tien_giai_2" class="form-control form-control-sm" min="0"
-                                           value="{{ giai.tien_giai_2|int if giai.tien_giai_2 is not none else '' }}"
-                                           placeholder="{{ giai.giai_2|int }}">
+                                    <input type="text" name="tien_giai_2" class="form-control form-control-sm money-input" inputmode="decimal"
+                                           value="{{ '{:,.0f}'.format(giai.tien_giai_2) if giai.tien_giai_2 is not none else '' }}"
+                                           placeholder="{{ '{:,.0f}'.format(giai.giai_2) }}">
                                 </div>
                                 <div class="col-4">
                                     <label class="form-label small mb-1">Ba</label>
-                                    <input type="number" name="tien_giai_3" class="form-control form-control-sm" min="0"
-                                           value="{{ giai.tien_giai_3|int if giai.tien_giai_3 is not none else '' }}"
-                                           placeholder="{{ giai.giai_3|int }}">
+                                    <input type="text" name="tien_giai_3" class="form-control form-control-sm money-input" inputmode="decimal"
+                                           value="{{ '{:,.0f}'.format(giai.tien_giai_3) if giai.tien_giai_3 is not none else '' }}"
+                                           placeholder="{{ '{:,.0f}'.format(giai.giai_3) }}">
                                 </div>
                             </div>
                             <div class="form-text">Để trống để tính theo tỷ lệ. Tổng nhập tay không vượt {{ "{:,.0f}".format(giai.quy_giai_thuong_thuc_te) }}đ.</div>
@@ -753,11 +753,11 @@ BTC</textarea>
                                 <td>
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text">₫</span>
-                                        <input type="number"
+                                        <input type="text"
                                                name="tien_{{ reg[0] }}"
-                                               class="form-control"
-                                               value="{{ reg[5] or 0 }}"
-                                               min="0" step="1000">
+                                               class="form-control money-input"
+                                               inputmode="decimal"
+                                               value="{{ '{:,.0f}'.format(reg[5] or 0) }}">
                                     </div>
                                 </td>
                                 <td>

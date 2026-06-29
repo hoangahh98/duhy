@@ -1,5 +1,33 @@
 <script>
 (function() {
+    function parseMoneyValue(value) {
+        return String(value || '').replace(/[^\d-]/g, '');
+    }
+
+    function formatMoneyValue(value) {
+        const cleaned = parseMoneyValue(value);
+        if (cleaned === '' || cleaned === '-') {
+            return '';
+        }
+        const sign = cleaned.startsWith('-') ? '-' : '';
+        const numericText = sign ? cleaned.slice(1) : cleaned;
+        const parsed = Number(numericText || '0');
+        return sign + parsed.toLocaleString('en-US');
+    }
+
+    function formatMoneyInputs(root) {
+        root.querySelectorAll('.money-input').forEach(function(input) {
+            input.value = formatMoneyValue(input.value);
+        });
+    }
+
+    document.querySelectorAll('.money-input').forEach(function(input) {
+        input.addEventListener('input', function() {
+            input.value = formatMoneyValue(input.value);
+        });
+    });
+    formatMoneyInputs(document);
+
     function markBusy(button, text) {
         if (!button || button.dataset.busy === '1') {
             return;
@@ -17,9 +45,15 @@
             return;
         }
 
+        if (event.defaultPrevented) {
+            return;
+        }
+        form.querySelectorAll('.money-input').forEach(function(input) {
+            input.value = parseMoneyValue(input.value);
+        });
         const submitter = event.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
         markBusy(submitter, submitter && submitter.dataset.loadingText ? submitter.dataset.loadingText : 'Đang xử lý...');
-    }, true);
+    });
 
     document.addEventListener('click', function(event) {
         const link = event.target.closest('a.btn');

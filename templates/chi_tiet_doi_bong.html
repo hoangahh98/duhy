@@ -110,15 +110,15 @@
                             <input type="hidden" name="thang" value="{{ selected_month }}">
                             <div class="mb-2">
                                 <label class="form-label small fw-semibold">Mức phí tháng / người</label>
-                                <input type="number" class="form-control" name="muc_phi_thang" value="{{ finance.muc_phi_thang|int }}" min="0">
+                                <input type="text" class="form-control money-input" inputmode="decimal" name="muc_phi_thang" value="{{ '{:,.0f}'.format(finance.muc_phi_thang) }}">
                             </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-semibold">Tiền sân tháng này</label>
-                                <input type="number" class="form-control" name="chi_phi_san_bai" value="{{ finance.chi_phi_san_bai|int }}" min="0">
+                                <input type="text" class="form-control money-input" inputmode="decimal" name="chi_phi_san_bai" value="{{ '{:,.0f}'.format(finance.chi_phi_san_bai) }}">
                             </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-semibold">Tiền sân còn lại tháng trước</label>
-                                <input type="number" class="form-control" name="tien_san_con_lai_thang_truoc" value="{{ finance.tien_san_con_lai_thang_truoc|int }}" min="0">
+                                <input type="text" class="form-control money-input" inputmode="decimal" name="tien_san_con_lai_thang_truoc" value="{{ '{:,.0f}'.format(finance.tien_san_con_lai_thang_truoc) }}">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold">Ghi chú tháng</label>
@@ -198,7 +198,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-semibold">Số tiền</label>
-                                <input type="number" class="form-control" name="so_tien" min="0" required>
+                                <input type="text" class="form-control money-input" inputmode="decimal" name="so_tien" required>
                             </div>
                             <div class="col-md-2 d-grid">
                                 <button type="submit" class="btn btn-success" data-loading-text="Đang thêm...">Thêm</button>
@@ -322,7 +322,7 @@
                                     <td>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">₫</span>
-                                            <input type="number" class="form-control" name="tien_{{ tv.id }}" value="{{ tv.so_tien_da_dong|int }}" min="0" step="1000">
+                                            <input type="text" class="form-control money-input" inputmode="decimal" name="tien_{{ tv.id }}" value="{{ '{:,.0f}'.format(tv.so_tien_da_dong) }}">
                                         </div>
                                     </td>
                                     <td>

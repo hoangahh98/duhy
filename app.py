@@ -1059,8 +1059,12 @@ def _current_month():
 
 
 def _money_from_form(value):
+    raw = str(value or '').strip()
+    if raw == '':
+        return 0
+    cleaned = ''.join(ch for ch in raw if ch.isdigit() or ch == '-')
     try:
-        return float(value or 0)
+        return float(cleaned or 0)
     except (TypeError, ValueError):
         return 0
 
@@ -2163,10 +2167,7 @@ def cap_nhat_tien_hang_loat(giai_id):
             reg_id = reg[0]
             so_tien = request.form.get(f'tien_{reg_id}', 0)
             trang_thai = request.form.get(f'trang_thai_{reg_id}', 'Chưa đóng')
-            try:
-                so_tien = float(so_tien) if so_tien else 0
-            except ValueError:
-                so_tien = 0
+            so_tien = _money_from_form(so_tien)
             updates.append((reg_id, so_tien, trang_thai))
         updated = DangKyGiaiModel.update_payments(updates)
         DBLogger.log_success(f"Batch payment update: {updated} records for tournament {giai_id}", user.get('email'), f'/giai-dau/{giai_id}/cap-nhat-tien-hang-loat')
@@ -2192,7 +2193,7 @@ def cap_nhat_giai_thuong(giai_id):
             if raw_value == '':
                 prizes.append(None)
             else:
-                prizes.append(max(0, float(raw_value)))
+                prizes.append(max(0, _money_from_form(raw_value)))
 
         if sum(value or 0 for value in prizes) > quy_toi_da:
             return redirect(f'/giai-dau/{giai_id}/admin?error=prize_over')

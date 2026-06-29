@@ -150,6 +150,22 @@ body {
     min-width: 140px;
 }
 
+.expense-table .expense-private-amount {
+    --bs-table-bg: #ffe08a;
+    --bs-table-color: #422006;
+    background-color: #ffe08a !important;
+    color: #422006 !important;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 2px #ffb703;
+}
+
+.expense-table .expense-private-amount .form-control {
+    background-color: #fff3c4;
+    border-color: #ffb703;
+    color: #422006;
+    font-weight: 700;
+}
+
 .expense-table .sticky-col {
     position: sticky;
     left: 0;

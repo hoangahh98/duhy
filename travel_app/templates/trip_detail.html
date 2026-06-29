@@ -459,7 +459,10 @@
                                             </select>
                                         </td>
                                         {% for member in members %}
-                                            <td><input class="form-control form-control-sm split-input money-input" inputmode="decimal" name="split_{{ row[0] }}_{{ member[0] }}" value="{{ expense.splits.get(member[0], 0)|vnd }}"></td>
+                                            {% set split_amount = expense.splits.get(member[0], 0) %}
+                                            <td class="{% if row[5] == 'private' and split_amount > 0 %}expense-private-amount{% endif %}">
+                                                <input class="form-control form-control-sm split-input money-input" inputmode="decimal" name="split_{{ row[0] }}_{{ member[0] }}" value="{{ split_amount|vnd }}">
+                                            </td>
                                         {% endfor %}
                                         <td>
                                             <input class="form-control form-control-sm total-input money-input fw-bold" inputmode="decimal" name="amount_{{ row[0] }}" value="{{ row[3]|vnd }}">
@@ -508,7 +511,8 @@
                                 {{ row[8] or 'Chưa chọn' }}
                             </td>
                             {% for member in members %}
-                                <td>{{ expense.splits.get(member[0], 0)|vnd }}đ</td>
+                                {% set split_amount = expense.splits.get(member[0], 0) %}
+                                <td class="{% if row[5] == 'private' and split_amount > 0 %}expense-private-amount{% endif %}">{{ split_amount|vnd }}đ</td>
                             {% endfor %}
                             <td class="fw-bold">{{ row[3]|vnd }}đ</td>
                             <td class="expense-actions">

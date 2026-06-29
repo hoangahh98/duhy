@@ -405,6 +405,27 @@ def update_collections(trip_id):
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
+@app.route("/chuyen-di/<int:trip_id>/thu/dong-du", methods=["POST"])
+@admin_required
+def mark_collections_paid_enough(trip_id):
+    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+        return "Không có quyền", 403
+    members = FinanceModel.members(trip_id)
+    expenses = FinanceModel.expenses(trip_id)
+    summary = build_summary(members, expenses)
+    updates = []
+    for member in members:
+        member_id = member[0]
+        updates.append({
+            "member_id": member_id,
+            "amount": summary["paid_enough_targets"].get(member_id, money(0)),
+            "note": member[5],
+        })
+    FinanceModel.update_collections(trip_id, updates)
+    flash("Đã cập nhật tiền thu đủ theo phần chi còn lại của từng người.", "success")
+    return redirect(url_for("trip_detail", trip_id=trip_id))
+
+
 @app.route("/chuyen-di/<int:trip_id>/chi", methods=["POST"])
 @admin_required
 def add_expense(trip_id):

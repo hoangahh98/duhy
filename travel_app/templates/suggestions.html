@@ -145,7 +145,7 @@
                             <td class="text-end text-nowrap">
                                 <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editSuggestion{{ item[0] }}" data-feedback="off">Sửa</button>
                                 <form class="d-inline" action="{{ url_for('delete_suggestion', suggestion_id=item[0]) }}" method="POST" onsubmit="return confirm('Xóa gợi ý này?')">
-                                    <button class="btn btn-sm btn-outline-danger">Xóa</button>
+                                    <button class="btn btn-sm btn-outline-danger" data-loading-text="Đang xóa...">Xóa</button>
                                 </form>
                             </td>
                         </tr>

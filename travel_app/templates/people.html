@@ -53,7 +53,7 @@
                         <td class="text-center text-nowrap">
                             <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonModal{{ person[0] }}" data-feedback="off">✏️</button>
                             <form action="{{ url_for('delete_person', person_id=person[0]) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa thành viên này khỏi danh bạ? Thành viên đã có trong chuyến đi cũ vẫn được giữ lại trong chuyến đi đó.')">
-                                <button class="btn btn-sm btn-danger py-0">🗑️</button>
+                                <button class="btn btn-sm btn-danger py-0" data-loading-text="Đang xóa...">🗑️</button>
                             </form>
                         </td>
                     </tr>

@@ -151,7 +151,7 @@
                     <option value="{{ admin[0] }}">{{ admin[1] }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="btn btn-primary">Thêm</button>
+                <button type="submit" class="btn btn-primary" data-loading-text="Đang thêm...">Thêm</button>
             </form>
             {% if not admins %}
             <div class="text-muted small mb-3">Không còn admin nào có thể cấp thêm quyền.</div>
@@ -337,7 +337,7 @@ BTC</textarea>
                                     <span id="playerSelectHint" class="fw-semibold text-primary text-nowrap">Đã chọn 0 mục</span>
                                 </div>
                                 <div class="d-flex gap-2 mt-2">
-                                    <button type="submit" class="btn btn-success btn-sm text-nowrap">💾 Lưu đã chọn</button>
+                                    <button type="submit" class="btn btn-success btn-sm text-nowrap" data-loading-text="Đang lưu...">💾 Lưu đã chọn</button>
                                 </div>
                             </form>
                             {% if not giai.all_vdv or (giai.all_vdv|length == registered_ids|length) %}
@@ -405,7 +405,7 @@ BTC</textarea>
                             </div>
                             <div class="form-text">Để trống để tính theo tỷ lệ. Tổng nhập tay không vượt {{ "{:,.0f}".format(giai.quy_giai_thuong_thuc_te) }}đ.</div>
                             <div class="d-grid gap-2 mt-2">
-                                <button type="submit" class="btn btn-warning btn-sm">Lưu tiền thưởng</button>
+                                <button type="submit" class="btn btn-warning btn-sm" data-loading-text="Đang lưu...">Lưu tiền thưởng</button>
                                 <button type="button" id="resetPrizeDefaults" class="btn btn-outline-secondary btn-sm">
                                     Đặt lại theo tỷ lệ mặc định
                                 </button>
@@ -519,7 +519,7 @@ BTC</textarea>
             {% endif %}
             {% if giai.vong_dict %}
             <form action="/giai-dau/{{ giai.id }}/chia-lich" method="POST" class="mb-0">
-                <button type="submit" class="btn btn-sm btn-warning fw-bold"
+                <button type="submit" class="btn btn-sm btn-warning fw-bold" data-loading-text="Đang ghép..."
                     onclick="return confirm('Tạo lịch mới sẽ XÓA toàn bộ tỷ số đã nhập. Tiếp tục?')">
                     🎲 Tái Sinh Lịch
                 </button>
@@ -540,7 +540,7 @@ BTC</textarea>
                             <div class="fw-bold text-primary">Ghép đội thủ công</div>
                             <div class="small text-muted">Chọn 2 VĐV cho mỗi đội. VĐV lẻ có thể để trống và không vào lịch.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary fw-bold">Tạo lịch từ đội đã ghép</button>
+                        <button type="submit" class="btn btn-primary fw-bold" data-loading-text="Đang tạo lịch...">Tạo lịch từ đội đã ghép</button>
                     </div>
                     <div id="manualPairWarning" class="alert alert-warning py-2 small d-none mb-2">
                         Một VĐV đang được chọn nhiều hơn một lần.
@@ -679,7 +679,7 @@ BTC</textarea>
                     {% if registrations|length >= min_schedule_players %}
                         <p class="text-muted mb-3">Chưa có lịch thi đấu. Bấm bên dưới để tự động sinh lịch.</p>
                         <form action="/giai-dau/{{ giai.id }}/chia-lich" method="POST">
-                            <button type="submit" class="btn btn-primary fw-bold px-4">
+                            <button type="submit" class="btn btn-primary fw-bold px-4" data-loading-text="Đang tạo lịch...">
                                 ⚡ TỰ ĐỘNG SINH LỊCH
                             </button>
                         </form>
@@ -779,7 +779,7 @@ BTC</textarea>
                         </table>
                         </div>
                         <div class="p-3 text-end border-top bg-white">
-                            <button type="submit" class="btn btn-primary fw-bold px-4">
+                            <button type="submit" class="btn btn-primary fw-bold px-4" data-loading-text="Đang lưu...">
                                 💾 Lưu tất cả ({{ registrations|length }} VĐV)
                             </button>
                         </div>

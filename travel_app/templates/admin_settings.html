@@ -9,7 +9,7 @@
                 <div class="col-md-4"><label class="form-label">User admin</label><input class="form-control" type="text" name="email" required></div>
                 <div class="col-md-3"><label class="form-label">Tên hiển thị</label><input class="form-control" name="display_name" value="Admin"></div>
                 <div class="col-md-3"><label class="form-label">Mật khẩu</label><input class="form-control" name="password" type="password" required></div>
-                <div class="col-md-2 d-grid"><button class="btn btn-success">Thêm</button></div>
+                <div class="col-md-2 d-grid"><button class="btn btn-success" data-loading-text="Đang thêm...">Thêm</button></div>
             </form>
         </div>
     </section>
@@ -27,10 +27,10 @@
                             <td><input form="admin-form-{{ admin[0] }}" class="form-control" name="display_name" value="{{ admin[2] }}"></td>
                             <td><input form="admin-form-{{ admin[0] }}" class="form-control" type="password" name="password" placeholder="Bỏ trống nếu không đổi"></td>
                             <td class="text-end">
-                                <button form="admin-form-{{ admin[0] }}" class="btn btn-sm btn-primary">Lưu</button>
+                                <button form="admin-form-{{ admin[0] }}" class="btn btn-sm btn-primary" data-loading-text="Đang lưu...">Lưu</button>
                                 {% if admin[1] != super_admin_email %}
                                 <form action="/admin-settings/{{ admin[0] }}/xoa" method="POST" class="d-inline" onsubmit="return confirm('Xóa admin này?')">
-                                    <button class="btn btn-sm btn-outline-danger">Xóa</button>
+                                    <button class="btn btn-sm btn-outline-danger" data-loading-text="Đang xóa...">Xóa</button>
                                 </form>
                                 {% endif %}
                             </td>

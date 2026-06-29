@@ -79,10 +79,10 @@
                                         </td>
                                         <td>
                                             <div class="d-flex gap-2">
-                                                <button form="editAdmin{{ admin[0] }}" type="submit" class="btn btn-sm btn-warning">Lưu</button>
+                                                <button form="editAdmin{{ admin[0] }}" type="submit" class="btn btn-sm btn-warning" data-loading-text="Đang lưu...">Lưu</button>
                                                 {% if not is_root %}
                                                 <form action="/admin-settings/{{ admin[0] }}/xoa" method="POST" onsubmit="return confirm('Xóa admin {{ admin[1] }}? Quyền sở hữu giải/đội sẽ chuyển về {{ super_admin_email }}.');">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-loading-text="Đang xóa...">Xóa</button>
                                                 </form>
                                                 {% endif %}
                                             </div>
@@ -118,7 +118,7 @@
                                 <label class="form-label fw-semibold">Nhập lại mật khẩu</label>
                                 <input type="password" class="form-control" name="confirm_password" required>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 fw-bold">Tạo admin</button>
+                            <button type="submit" class="btn btn-success w-100 fw-bold" data-loading-text="Đang tạo...">Tạo admin</button>
                         </form>
                     </div>
                 </div>

@@ -113,7 +113,7 @@
                                     <td class="text-end text-nowrap">
                                         <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editMemberModal{{ member[0] }}" data-feedback="off">✏️</button>
                                         <form class="d-inline" action="{{ url_for('delete_member', trip_id=trip[0], member_id=member[0]) }}" method="POST" onsubmit="return confirm('Xóa thành viên này khỏi chuyến đi?')">
-                                            <button class="btn btn-sm btn-danger py-0">🗑️</button>
+                                            <button class="btn btn-sm btn-danger py-0" data-loading-text="Đang xóa...">🗑️</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -504,7 +504,7 @@
                             <td class="fw-bold">{{ row[3]|vnd }}đ</td>
                             <td class="expense-actions">
                                 <form action="{{ url_for('delete_expense', trip_id=trip[0], expense_id=row[0]) }}" method="POST" onsubmit="return confirm('Xóa khoản chi này?')">
-                                    <button class="btn btn-sm btn-outline-danger w-100">Xóa</button>
+                                    <button class="btn btn-sm btn-outline-danger w-100" data-loading-text="Đang xóa...">Xóa</button>
                                 </form>
                             </td>
                         </tr>
@@ -603,7 +603,7 @@
             {% endif %}
             {% for permission in permissions %}
                 <form action="{{ url_for('remove_permission', trip_id=trip[0], permission_id=permission[0]) }}" method="POST" class="d-inline-block me-2 mb-2">
-                    <button class="btn btn-sm btn-outline-secondary">{{ permission[2] }} ×</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-loading-text="Đang gỡ...">{{ permission[2] }} ×</button>
                 </form>
             {% endfor %}
             {% if not permissions %}

@@ -586,7 +586,7 @@ class TripModel:
         with db_cursor() as cursor:
             cursor.execute(
                 """
-                SELECT t.id, t.name, t.description, tm.id, tm.name
+                SELECT t.id, t.name, t.description, tm.id, tm.name, t.treasurer_member_id
                 FROM trips t
                 INNER JOIN trip_members tm ON t.id = tm.trip_id
                 WHERE t.id = %s
@@ -1046,13 +1046,10 @@ class FinanceModel:
             cursor.execute("DELETE FROM trip_expenses WHERE trip_id = %s AND id = %s;", (trip_id, expense_id))
 
 
-def build_summary(members, expenses):
+def build_summary(members, expenses, treasurer_member_id=None):
     member_spent = {member[0]: Decimal("0") for member in members}
     member_paid_total = {member[0]: Decimal("0") for member in members}
     member_names = {member[0]: member[1] for member in members}
-    total_collected = Decimal("0")
-    for member in members:
-        total_collected += money(member[4])
     total_spent = Decimal("0")
     for expense in expenses:
         total_spent += money(expense["row"][3])
@@ -1066,6 +1063,14 @@ def build_summary(members, expenses):
     for member in members:
         member_id = member[0]
         paid_enough_targets[member_id] = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")), Decimal("0"))
+    effective_collected = {}
+    for member in members:
+        member_id = member[0]
+        collected = money(member[4])
+        if treasurer_member_id and member_id == treasurer_member_id:
+            collected = max(collected, paid_enough_targets.get(member_id, Decimal("0")))
+        effective_collected[member_id] = collected
+    total_collected = sum(effective_collected.values(), Decimal("0"))
     gross_credit = {
         member_id: max(member_paid_total.get(member_id, Decimal("0")) - member_spent.get(member_id, Decimal("0")), Decimal("0"))
         for member_id in member_spent
@@ -1082,7 +1087,7 @@ def build_summary(members, expenses):
     balances = {}
     for member in members:
         member_id = member[0]
-        debt = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")) - money(member[4]), Decimal("0"))
+        debt = max(member_spent.get(member_id, Decimal("0")) - member_paid_total.get(member_id, Decimal("0")) - effective_collected.get(member_id, Decimal("0")), Decimal("0"))
         balances[member_id] = member_advanced.get(member_id, Decimal("0")) - debt
     total_advanced = max(total_spent - total_collected, Decimal("0"))
     debtors = [
@@ -1123,6 +1128,7 @@ def build_summary(members, expenses):
         "member_spent": member_spent,
         "member_advanced": member_advanced,
         "member_paid_total": member_paid_total,
+        "effective_collected": effective_collected,
         "paid_enough_targets": paid_enough_targets,
         "balances": balances,
         "payment_suggestions": payment_suggestions,

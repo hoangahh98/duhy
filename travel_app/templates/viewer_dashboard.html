@@ -10,7 +10,7 @@
                     <h2 class="h5 text-success fw-bold">{{ trip[1] }}</h2>
                     <p class="text-muted">{{ trip[2] or 'Chưa có ghi chú' }}</p>
                     <div class="small text-muted mb-3">Tên trong chuyến đi: {{ trip[3] }}</div>
-                    <a class="btn btn-primary w-100" href="/nguoi-xem/chuyen-di/{{ trip[0] }}">Xem thu chi</a>
+                    <a class="btn btn-primary w-100" href="/nguoi-xem/chuyen-di/{{ trip[0] }}" data-loading-text="Đang mở...">Xem thu chi</a>
                 </div>
             </section>
         </div>

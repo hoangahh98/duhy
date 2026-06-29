@@ -315,7 +315,7 @@ def trip_detail(trip_id):
         trip=trip,
         members=members,
         expenses=expenses,
-        summary=build_summary(members, expenses),
+        summary=build_summary(members, expenses, trip[6] if len(trip) > 6 else None),
         today=date.today().isoformat(),
         available_people=PeopleModel.available_for_trip(trip_id, admin_scope_id(user)),
         admins=UserModel.get_available_admins_for_trip(trip_id, trip[3], user["id"]),
@@ -408,11 +408,12 @@ def update_collections(trip_id):
 @app.route("/chuyen-di/<int:trip_id>/thu/dong-du", methods=["POST"])
 @admin_required
 def mark_collections_paid_enough(trip_id):
-    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+    trip = TripModel.get_for_admin(trip_id, admin_scope_id(session["user"]))
+    if not trip:
         return "Không có quyền", 403
     members = FinanceModel.members(trip_id)
     expenses = FinanceModel.expenses(trip_id)
-    summary = build_summary(members, expenses)
+    summary = build_summary(members, expenses, trip[6] if len(trip) > 6 else None)
     updates = []
     for member in members:
         member_id = member[0]
@@ -663,7 +664,7 @@ def viewer_trip(trip_id):
         trip=trip,
         members=members,
         expenses=expenses,
-        summary=build_summary(members, expenses),
+        summary=build_summary(members, expenses, trip[5] if len(trip) > 5 else None),
         viewer_member_id=trip[3],
     )
 

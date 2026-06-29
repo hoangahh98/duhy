@@ -45,10 +45,10 @@
                         <div class="small text-muted mb-1">📍 {{ trip[6] or 'Chưa chọn địa danh' }}</div>
                         <div class="small text-muted mb-3">👥 {{ trip[3] }} thành viên</div>
                         <div class="d-grid gap-2">
-                            <a class="btn btn-primary" href="{{ url_for('trip_detail', trip_id=trip[0]) }}">Xem chi tiết</a>
+                            <a class="btn btn-primary" href="{{ url_for('trip_detail', trip_id=trip[0]) }}" data-loading-text="Đang mở...">Xem chi tiết</a>
                             <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editTripModal{{ trip[0] }}" data-feedback="off">Sửa chuyến đi</button>
                             <form action="{{ url_for('delete_trip', trip_id=trip[0]) }}" method="POST" onsubmit="return confirm('Xóa chuyến đi này?')">
-                                <button class="btn btn-outline-danger w-100" type="submit">Xóa</button>
+                                <button class="btn btn-outline-danger w-100" type="submit" data-loading-text="Đang xóa...">Xóa</button>
                             </form>
                         </div>
                     </div>

@@ -441,7 +441,7 @@ def chi_tiet_ban_to_lieng(game_id):
     if not game:
         return "Không tìm thấy bàn tố liêng", 404
     participants = EntertainmentLiengGameModel.get_participants(game_id)
-    scoreboard = sorted(participants, key=lambda player: (-int(player[9] or 0), str(player[1] or "").lower()))
+    scoreboard = EntertainmentLiengGameModel.get_scoreboard(game_id)
     actions = EntertainmentLiengGameModel.get_actions(game_id)
     my_participant_id = EntertainmentLiengGameModel.participant_for_user(game_id, user)
     turn_left = EntertainmentLiengGameModel.TURN_SECONDS
@@ -453,6 +453,7 @@ def chi_tiet_ban_to_lieng(game_id):
     showdown_players = [player for player in participants if not player[7]]
     can_claim_showdown_win = bool(game[2] == 'showdown' and my_participant_id and any(player[0] == my_participant_id for player in showdown_players))
     required_bet = EntertainmentLiengGameModel.required_bet_for_turn(game_id, my_participant_id) or game[3]
+    final_view = request.args.get('ket_thuc') == '1' or game[2] == 'ended'
     return render_template(
         'giai_tri_to_lieng_chi_tiet.html',
         user=user,
@@ -464,6 +465,7 @@ def chi_tiet_ban_to_lieng(game_id):
         actions=actions,
         my_participant_id=my_participant_id,
         required_bet=required_bet,
+        final_view=final_view,
         turn_seconds=EntertainmentLiengGameModel.TURN_SECONDS,
         turn_left=turn_left,
     )
@@ -540,6 +542,18 @@ def xoa_ban_to_lieng(game_id):
     EntertainmentLiengGameModel.delete_game(game_id)
     flash('Đã xóa bàn tố liêng.', 'success')
     return redirect(url_for('giai_tri_to_lieng'))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/ket-thuc', methods=['POST'])
+@login_required
+def ket_thuc_ban_to_lieng(game_id):
+    try:
+        EntertainmentLiengGameModel.end_game(game_id)
+        flash('Đã kết thúc bàn tố liêng.', 'success')
+        return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id, ket_thuc=1))
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
 
 
 @app.route('/giai-tri/to-lieng/<int:game_id>/them-toi', methods=['POST'])

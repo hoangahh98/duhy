@@ -1123,6 +1123,27 @@ class EntertainmentLiengGameModel:
             return cursor.rowcount
 
     @staticmethod
+    def end_game(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("SELECT status FROM entertainment_lieng_games WHERE id = %s;", (game_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("Không tìm thấy bàn.")
+            if row[0] != 'setup':
+                raise ValueError("Chỉ kết thúc bàn khi đang chờ ván, không còn pot/lượt đang xử lý.")
+            cursor.execute("""
+                UPDATE entertainment_lieng_games
+                SET status = 'ended', ended_at = CURRENT_TIMESTAMP,
+                    current_turn_participant_id = NULL, turn_started_at = NULL
+                WHERE id = %s;
+            """, (game_id,))
+            cursor.execute("""
+                INSERT INTO entertainment_lieng_actions (game_id, round_no, action_type, note)
+                SELECT id, round_no, 'end_game', 'Kết thúc bàn'
+                FROM entertainment_lieng_games WHERE id = %s;
+            """, (game_id,))
+
+    @staticmethod
     def get_participants(game_id):
         with db_cursor() as cursor:
             cursor.execute("""
@@ -1131,6 +1152,17 @@ class EntertainmentLiengGameModel:
                 FROM entertainment_lieng_participants
                 WHERE game_id = %s AND active = TRUE
                 ORDER BY COALESCE(seat_no, 9999), id;
+            """, (game_id,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_scoreboard(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, display_name, score, active, seat_no
+                FROM entertainment_lieng_participants
+                WHERE game_id = %s
+                ORDER BY score DESC, active DESC, display_name ASC;
             """, (game_id,))
             return cursor.fetchall()
 
@@ -1188,7 +1220,7 @@ class EntertainmentLiengGameModel:
                     SELECT p.game_id, g.name
                     FROM entertainment_lieng_participants p
                     JOIN entertainment_lieng_games g ON g.id = p.game_id
-                    WHERE p.admin_id = %s AND p.active = TRUE
+                    WHERE p.admin_id = %s AND p.active = TRUE AND g.status <> 'ended'
                     LIMIT 1;
                 """, (user.get("id"),))
             else:
@@ -1196,7 +1228,7 @@ class EntertainmentLiengGameModel:
                     SELECT p.game_id, g.name
                     FROM entertainment_lieng_participants p
                     JOIN entertainment_lieng_games g ON g.id = p.game_id
-                    WHERE p.user_client_id = %s AND p.active = TRUE
+                    WHERE p.user_client_id = %s AND p.active = TRUE AND g.status <> 'ended'
                     LIMIT 1;
                 """, (user.get("id"),))
             return cursor.fetchone()
@@ -1215,7 +1247,7 @@ class EntertainmentLiengGameModel:
                     SELECT p.game_id, g.name
                     FROM entertainment_lieng_participants p
                     JOIN entertainment_lieng_games g ON g.id = p.game_id
-                    WHERE p.admin_id = %s AND p.active = TRUE
+                    WHERE p.admin_id = %s AND p.active = TRUE AND g.status <> 'ended'
                     LIMIT 1;
                 """, (user.get("id"),))
                 active_table = cursor.fetchone()
@@ -1236,7 +1268,7 @@ class EntertainmentLiengGameModel:
                     SELECT p.game_id, g.name
                     FROM entertainment_lieng_participants p
                     JOIN entertainment_lieng_games g ON g.id = p.game_id
-                    WHERE p.user_client_id = %s AND p.active = TRUE
+                    WHERE p.user_client_id = %s AND p.active = TRUE AND g.status <> 'ended'
                     LIMIT 1;
                 """, (user.get("id"),))
                 active_table = cursor.fetchone()

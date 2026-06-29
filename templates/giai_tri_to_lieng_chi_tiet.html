@@ -156,7 +156,7 @@
             <div class="d-flex gap-2 align-items-center flex-wrap ms-auto">
                 <a class="btn btn-sm btn-outline-light" href="{{ '/' if user.role == 'admin' else '/vdv-dashboard' }}">Trang chủ</a>
                 <a class="btn btn-sm btn-outline-light" href="/giai-tri/to-lieng">Tố liêng</a>
-                <span class="badge {{ 'bg-success' if game[2] == 'playing' else ('bg-warning text-dark' if game[2] == 'showdown' else 'bg-secondary') }}">{{ 'Đang chơi' if game[2] == 'playing' else ('Chờ xác nhận thắng' if game[2] == 'showdown' else 'Chờ ván') }}</span>
+                <span class="badge {{ 'bg-success' if game[2] == 'playing' else ('bg-warning text-dark' if game[2] == 'showdown' else ('bg-dark' if game[2] == 'ended' else 'bg-secondary')) }}">{{ 'Đang chơi' if game[2] == 'playing' else ('Chờ xác nhận thắng' if game[2] == 'showdown' else ('Đã kết thúc' if game[2] == 'ended' else 'Chờ ván')) }}</span>
                 <span class="navbar-text d-none d-md-inline">{{ user.display_name or user.email }} · {{ 'Admin' if user.role == 'admin' else 'Client' }}</span>
                 <a href="/dang-xuat" class="btn btn-sm btn-outline-danger">Đăng xuất</a>
             </div>
@@ -171,6 +171,13 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        {% if final_view %}
+            <section class="alert alert-primary shadow-sm">
+                <h1 class="h4 fw-bold">Bảng xếp hạng cuối bàn</h1>
+                <p class="mb-0">Chúc mừng người có điểm dương. Người điểm âm hôm nay hơi đau ví, ván sau gỡ lại.</p>
+            </section>
+        {% endif %}
 
         <section class="card shadow-sm border-0 mb-4">
             <div class="card-body">
@@ -193,6 +200,8 @@
                     <div class="alert alert-warning mt-3 mb-0">
                         Đã cân điểm giữa {% for p in showdown_players %}<strong>{{ p[1] }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}. Người thắng bấm <strong>Tôi thắng</strong> để nhận pot.
                     </div>
+                {% elif game[2] == 'ended' %}
+                    <div class="alert alert-primary mt-3 mb-0">Bàn đã kết thúc. Bảng xếp hạng bên dưới là kết quả cuối bàn.</div>
                 {% endif %}
             </div>
         </section>
@@ -202,7 +211,9 @@
                 <section class="card shadow-sm border-0 mb-4">
                     <div class="card-body">
                         <h2 class="h5 fw-bold mb-3">Thao tác</h2>
-                        {% if my_participant_id %}
+                        {% if game[2] == 'ended' %}
+                            <div class="alert alert-info mb-0">Bàn đã kết thúc.</div>
+                        {% elif my_participant_id %}
                             <form method="post" action="/giai-tri/to-lieng/{{ game[0] }}/thoat-ban" class="mb-2" onsubmit="return confirm('Thoát khỏi bàn này?');">
                                 <button class="btn btn-outline-danger w-100" data-loading-text="Đang thoát...">Thoát bàn</button>
                             </form>
@@ -305,8 +316,17 @@
 
                 <section class="card shadow-sm border-0 mb-4">
                     <div class="card-body">
-                        <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
-                        <div class="text-muted small mb-3">Tổng điểm lũy kế sau các ván. Phần này tách riêng với pot/cược đang chơi.</div>
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
+                                <div class="text-muted small">Tổng điểm lũy kế sau các ván. Phần này tách riêng với pot/cược đang chơi.</div>
+                            </div>
+                            {% if game[2] == 'setup' and participants %}
+                            <form method="post" action="/giai-tri/to-lieng/{{ game[0] }}/ket-thuc" onsubmit="return confirm('Kết thúc bàn tố liêng này?');">
+                                <button class="btn btn-warning" data-loading-text="Đang kết thúc...">Kết thúc bàn</button>
+                            </form>
+                            {% endif %}
+                        </div>
                         {% if scoreboard %}
                             <div class="list-group list-group-flush">
                             {% for p in scoreboard %}
@@ -315,9 +335,14 @@
                                         <span class="badge {{ 'text-bg-warning' if loop.index == 1 else 'text-bg-light' }}">#{{ loop.index }}</span>
                                         <div class="ranking-name">
                                             <div class="fw-semibold">{{ p[1] }}</div>
-                                            <div class="text-muted small">Ghế {{ p[5] or '-' }}{% if my_participant_id == p[0] %} · Bạn{% endif %}</div>
+                                            <div class="text-muted small">Ghế {{ p[4] or '-' }}{% if my_participant_id == p[0] %} · Bạn{% endif %}{% if not p[3] %} · Đã rời bàn{% endif %}</div>
+                                            {% if final_view %}
+                                                <div class="small {{ 'text-success' if p[2] > 0 else ('text-danger' if p[2] < 0 else 'text-muted') }}">
+                                                    {{ 'Chúc mừng, hôm nay đang lời điểm.' if p[2] > 0 else ('Chia buồn, hôm nay đang âm điểm.' if p[2] < 0 else 'Hòa vốn.') }}
+                                                </div>
+                                            {% endif %}
                                         </div>
-                                        <div class="text-end fw-bold fs-5 {{ 'text-success' if p[9] > 0 else ('text-danger' if p[9] < 0 else 'text-muted') }}">{{ p[9] }}</div>
+                                        <div class="text-end fw-bold fs-5 {{ 'text-success' if p[2] > 0 else ('text-danger' if p[2] < 0 else 'text-muted') }}">{{ p[2] }}</div>
                                     </div>
                                 </div>
                             {% endfor %}

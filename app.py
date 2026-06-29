@@ -412,6 +412,9 @@ def giai_tri_to_lieng():
 def tao_ban_to_lieng():
     user = session.get('user', {})
     try:
+        active_table = EntertainmentLiengGameModel.active_table_for_user(user)
+        if active_table:
+            raise ValueError(f"Bạn đang ở bàn {active_table[1]}. Hãy thoát bàn đó trước khi tạo bàn khác.")
         game_id = EntertainmentLiengGameModel.create_game(
             request.form.get('name'),
             request.form.get('min_bet'),
@@ -514,7 +517,10 @@ def state_ban_to_lieng(game_id):
         payload = _lieng_state_payload(game_id, user)
         if not payload:
             return jsonify({'success': False, 'error': 'Không tìm thấy bàn tố liêng'}), 404
-        return jsonify(payload)
+        response = make_response(jsonify(payload))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        return response
     except Exception as e:
         DBLogger.log_error(f"Error loading lieng state: {str(e)}", user.get('email'), f'/giai-tri/to-lieng/{game_id}/state', context=traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500

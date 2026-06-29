@@ -355,6 +355,7 @@
     const POLL_MS = 1500;
     const isMyTurn = {{ 'true' if my_participant_id and my_participant_id == game[7] and game[2] == 'playing' else 'false' }};
     let statePollBusy = false;
+    let statePollTimer = null;
     let initialStateSignature = JSON.stringify({
         status: {{ game[2]|tojson }},
         pot: {{ game[5]|tojson }},
@@ -391,13 +392,30 @@
         });
     }
 
+    function scheduleLiengPoll(delay) {
+        window.clearTimeout(statePollTimer);
+        statePollTimer = window.setTimeout(pollLiengState, delay);
+    }
+
     async function pollLiengState() {
-        if (statePollBusy || document.hidden) {
+        if (statePollBusy) {
+            scheduleLiengPoll(POLL_MS);
             return;
         }
         statePollBusy = true;
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(function() {
+            controller.abort();
+        }, 5000);
         try {
-            const response = await fetch(STATE_URL, { headers: { 'X-Requested-With': 'fetch' } });
+            const response = await fetch(STATE_URL + '?_=' + Date.now(), {
+                cache: 'no-store',
+                signal: controller.signal,
+                headers: {
+                    'X-Requested-With': 'fetch',
+                    'Cache-Control': 'no-cache'
+                }
+            });
             const state = await response.json();
             if (!state.success) {
                 return;
@@ -415,17 +433,24 @@
         } catch (error) {
             // Retry silently on next poll.
         } finally {
+            window.clearTimeout(timeoutId);
             statePollBusy = false;
+            scheduleLiengPoll(document.hidden ? 3000 : POLL_MS);
         }
     }
 
-    window.setInterval(pollLiengState, POLL_MS);
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
-            pollLiengState();
+            scheduleLiengPoll(0);
         }
     });
-    pollLiengState();
+    window.addEventListener('focus', function() {
+        scheduleLiengPoll(0);
+    });
+    window.addEventListener('pageshow', function() {
+        scheduleLiengPoll(0);
+    });
+    scheduleLiengPoll(0);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% include '_pwa_register.html' %}

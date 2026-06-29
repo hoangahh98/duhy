@@ -1180,6 +1180,27 @@ class EntertainmentLiengGameModel:
             return cursor.fetchone()[0]
 
     @staticmethod
+    def active_table_for_user(user):
+        with db_cursor() as cursor:
+            if user.get("role") == "admin":
+                cursor.execute("""
+                    SELECT p.game_id, g.name
+                    FROM entertainment_lieng_participants p
+                    JOIN entertainment_lieng_games g ON g.id = p.game_id
+                    WHERE p.admin_id = %s AND p.active = TRUE
+                    LIMIT 1;
+                """, (user.get("id"),))
+            else:
+                cursor.execute("""
+                    SELECT p.game_id, g.name
+                    FROM entertainment_lieng_participants p
+                    JOIN entertainment_lieng_games g ON g.id = p.game_id
+                    WHERE p.user_client_id = %s AND p.active = TRUE
+                    LIMIT 1;
+                """, (user.get("id"),))
+            return cursor.fetchone()
+
+    @staticmethod
     def add_current_user(game_id, user):
         with db_cursor(commit=True) as cursor:
             cursor.execute("SELECT status FROM entertainment_lieng_games WHERE id = %s;", (game_id,))
@@ -1190,11 +1211,17 @@ class EntertainmentLiengGameModel:
                 raise ValueError("Bàn đang có ván chưa kết thúc, chưa thể thêm người chơi.")
             if user.get("role") == "admin":
                 cursor.execute("""
-                    SELECT id FROM entertainment_lieng_participants
-                    WHERE game_id = %s AND admin_id = %s AND active = TRUE LIMIT 1;
-                """, (game_id, user.get("id")))
-                if cursor.fetchone():
+                    SELECT p.game_id, g.name
+                    FROM entertainment_lieng_participants p
+                    JOIN entertainment_lieng_games g ON g.id = p.game_id
+                    WHERE p.admin_id = %s AND p.active = TRUE
+                    LIMIT 1;
+                """, (user.get("id"),))
+                active_table = cursor.fetchone()
+                if active_table and active_table[0] == game_id:
                     raise ValueError("Bạn đã ở trong bàn.")
+                if active_table:
+                    raise ValueError(f"Bạn đang ở bàn {active_table[1]}. Hãy thoát bàn đó trước khi vào bàn khác.")
                 cursor.execute("""
                     INSERT INTO entertainment_lieng_participants (game_id, display_name, user_role, admin_id)
                     VALUES (%s, %s, 'admin', %s)
@@ -1204,11 +1231,17 @@ class EntertainmentLiengGameModel:
                 """, (game_id, user.get("display_name") or user.get("email") or "Admin", user.get("id")))
             else:
                 cursor.execute("""
-                    SELECT id FROM entertainment_lieng_participants
-                    WHERE game_id = %s AND user_client_id = %s AND active = TRUE LIMIT 1;
-                """, (game_id, user.get("id")))
-                if cursor.fetchone():
+                    SELECT p.game_id, g.name
+                    FROM entertainment_lieng_participants p
+                    JOIN entertainment_lieng_games g ON g.id = p.game_id
+                    WHERE p.user_client_id = %s AND p.active = TRUE
+                    LIMIT 1;
+                """, (user.get("id"),))
+                active_table = cursor.fetchone()
+                if active_table and active_table[0] == game_id:
                     raise ValueError("Bạn đã ở trong bàn.")
+                if active_table:
+                    raise ValueError(f"Bạn đang ở bàn {active_table[1]}. Hãy thoát bàn đó trước khi vào bàn khác.")
                 cursor.execute("""
                     INSERT INTO entertainment_lieng_participants (game_id, display_name, user_role, user_client_id)
                     VALUES (%s, %s, 'vdv', %s)

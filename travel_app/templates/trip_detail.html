@@ -194,25 +194,61 @@
     <div class="row g-3 mb-3">
         <div class="col-lg-5">
             <div class="card h-100">
-                <div class="card-hdr blue">Tiền thu từng người</div>
-                <div class="card-body">
-                    <form action="{{ url_for('update_collections', trip_id=trip[0]) }}" method="POST">
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle">
-                                <thead class="table-light"><tr><th>Thành viên</th><th>Số tiền thu</th><th>Ghi chú</th></tr></thead>
-                                <tbody>
-                                    {% for member in members %}
-                                    <tr>
-                                        <td class="fw-semibold">{{ member[1] }}</td>
-                                        <td><input class="form-control form-control-sm" name="collection_{{ member[0] }}" type="number" min="0" step="1" value="{{ member[4]|int }}"></td>
-                                        <td><input class="form-control form-control-sm" name="collection_note_{{ member[0] }}" value="{{ member[5] }}"></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        <button class="btn btn-primary w-100" data-loading-text="Đang lưu...">Lưu tiền thu</button>
-                    </form>
+                <div class="card-hdr blue">
+                    <span>Tiền thu từng người</span>
+                    {% if members %}
+                    <button class="btn btn-sm btn-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#formCapNhatTienThu">
+                        ✏️ Cập nhật tiền thu
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body p-3">
+                    {% if members %}
+                    <div class="collapse mb-3" id="formCapNhatTienThu">
+                        <form action="{{ url_for('update_collections', trip_id=trip[0]) }}" method="POST">
+                            <div class="border rounded bg-light overflow-hidden">
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-secondary"><tr><th style="width:35%">Thành viên</th><th style="width:30%">Số tiền thu</th><th>Ghi chú</th></tr></thead>
+                                        <tbody>
+                                            {% for member in members %}
+                                            <tr>
+                                                <td class="fw-semibold">{{ member[1] }}</td>
+                                                <td>
+                                                    <div class="input-group input-group-sm">
+                                                        <input class="form-control money-input" name="collection_{{ member[0] }}" inputmode="decimal" value="{{ member[4]|vnd }}">
+                                                        <span class="input-group-text">đ</span>
+                                                    </div>
+                                                </td>
+                                                <td><input class="form-control form-control-sm" name="collection_note_{{ member[0] }}" value="{{ member[5] }}"></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-3 text-end border-top bg-white">
+                                    <button class="btn btn-primary fw-bold px-4" data-loading-text="Đang lưu...">💾 Lưu tất cả ({{ members|length }} thành viên)</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light"><tr><th>Thành viên</th><th>Số tiền thu</th><th>Ghi chú</th></tr></thead>
+                            <tbody>
+                                {% for member in members %}
+                                <tr>
+                                    <td class="fw-semibold">{{ member[1] }}</td>
+                                    <td>{{ member[4]|vnd }}đ</td>
+                                    <td>{{ member[5] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-muted">Chưa có thành viên nào.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -245,7 +281,7 @@
                         </div>
                         <div class="col-md-3" id="sharedAmountField">
                             <label class="form-label small fw-semibold">Số tiền tổng</label>
-                            <input class="form-control" type="number" min="0" step="1" name="amount" id="sharedAmountInput">
+                            <input class="form-control money-input" inputmode="decimal" name="amount" id="sharedAmountInput">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold">Người trả tiền</label>
@@ -269,7 +305,7 @@
                                     {% for member in members %}
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">{{ member[1] }}</label>
-                                        <input class="form-control private-split-input" type="number" min="0" step="1" name="private_split_{{ member[0] }}" placeholder="0" disabled>
+                                        <input class="form-control private-split-input money-input" inputmode="decimal" name="private_split_{{ member[0] }}" placeholder="0" disabled>
                                     </div>
                                     {% endfor %}
                                 </div>
@@ -309,7 +345,72 @@
     </div>
 
     <section class="card mb-3">
-        <div class="card-body p-0">
+        <div class="card-hdr green">
+            <span>Chi tiêu</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span>{{ summary.total_spent|vnd }}đ</span>
+                {% if expenses %}
+                <button class="btn btn-sm btn-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#formCapNhatChiTieu">
+                    ✏️ Cập nhật chi tiêu
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body p-3">
+            {% if expenses %}
+            <div class="collapse mb-3" id="formCapNhatChiTieu">
+                <form action="{{ url_for('update_expenses_bulk', trip_id=trip[0]) }}" method="POST">
+                    <div class="border rounded bg-light overflow-hidden">
+                        <div class="table-responsive expense-table-wrap">
+                            <table class="table table-sm table-bordered align-middle expense-table expense-edit-table mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th class="sticky-col">Chi tiêu</th>
+                                        <th class="payer-col">Người trả</th>
+                                        {% for member in members %}<th>{{ member[1] }}</th>{% endfor %}
+                                        <th>Tổng chi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in expenses %}
+                                    {% set row = expense.row %}
+                                    <tr>
+                                        <td class="sticky-col">
+                                            <select class="form-select form-select-sm mb-1 fw-semibold" name="title_{{ row[0] }}" required>
+                                                {% for category in expense_categories %}
+                                                <option value="{{ category }}" {% if row[2] == category or (row[2] not in expense_categories and category == 'Khác') %}selected{% endif %}>{{ category }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input class="form-control form-control-sm mb-1" type="date" name="spent_date_{{ row[0] }}" value="{{ row[1] }}">
+                                            <input class="form-control form-control-sm" name="note_{{ row[0] }}" value="{{ row[4] }}" placeholder="Ghi chú">
+                                        </td>
+                                        <td class="payer-col">
+                                            <select class="form-select form-select-sm" name="paid_by_member_id_{{ row[0] }}" required>
+                                                <option value="">Chọn người trả</option>
+                                                {% for member in members %}
+                                                <option value="{{ member[0] }}" {% if row[7] == member[0] %}selected{% endif %}>{{ member[1] }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        {% for member in members %}
+                                            <td><input class="form-control form-control-sm split-input money-input" inputmode="decimal" name="split_{{ row[0] }}_{{ member[0] }}" value="{{ expense.splits.get(member[0], 0)|vnd }}"></td>
+                                        {% endfor %}
+                                        <td>
+                                            <input class="form-control form-control-sm total-input money-input fw-bold" inputmode="decimal" name="amount_{{ row[0] }}" value="{{ row[3]|vnd }}">
+                                            <div class="small split-status"></div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 text-end border-top bg-white">
+                            <button class="btn btn-primary fw-bold px-4" data-loading-text="Đang lưu...">💾 Lưu tất cả ({{ expenses|length }} khoản chi)</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
             <div class="table-responsive expense-table-wrap">
                 <table class="table table-bordered align-middle expense-table mb-0">
                     <thead class="table-success">
@@ -326,12 +427,7 @@
                         {% set row = expense.row %}
                         <tr>
                             <td class="sticky-col">
-                                <form id="expense-form-{{ row[0] }}" action="{{ url_for('update_expense', trip_id=trip[0], expense_id=row[0]) }}" method="POST"></form>
-                                <select form="expense-form-{{ row[0] }}" class="form-select form-select-sm mb-1 fw-semibold" name="title" required>
-                                    {% for category in expense_categories %}
-                                    <option value="{{ category }}" {% if row[2] == category or (row[2] not in expense_categories and category == 'Khác') %}selected{% endif %}>{{ category }}</option>
-                                    {% endfor %}
-                                </select>
+                                <div class="fw-semibold">{{ row[2] }}</div>
                                 <div class="mb-1">
                                     {% if row[5] == 'private' %}
                                     <span class="badge bg-warning text-dark">Riêng</span>
@@ -339,27 +435,17 @@
                                     <span class="badge bg-success">Chung</span>
                                     {% endif %}
                                 </div>
-                                <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm mb-1" type="date" name="spent_date" value="{{ row[1] }}">
-                                <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm" name="note" value="{{ row[4] }}" placeholder="Ghi chú">
+                                <div class="small text-muted">{{ row[1].strftime('%d/%m/%Y') if row[1].strftime is defined else row[1] }}</div>
+                                {% if row[4] %}<div class="small text-muted">{{ row[4] }}</div>{% endif %}
                             </td>
                             <td class="payer-col">
-                                <select form="expense-form-{{ row[0] }}" class="form-select form-select-sm" name="paid_by_member_id" required>
-                                    <option value="">Chọn người trả</option>
-                                    {% for member in members %}
-                                    <option value="{{ member[0] }}" {% if row[7] == member[0] %}selected{% endif %}>{{ member[1] }}</option>
-                                    {% endfor %}
-                                </select>
-                                {% if row[8] %}<div class="small text-muted mt-1">Ứng: {{ row[8] }}</div>{% endif %}
+                                {{ row[8] or 'Chưa chọn' }}
                             </td>
                             {% for member in members %}
-                                <td><input form="expense-form-{{ row[0] }}" class="form-control form-control-sm split-input" type="number" min="0" step="1" name="split_{{ row[0] }}_{{ member[0] }}" value="{{ expense.splits.get(member[0], 0)|int }}"></td>
+                                <td>{{ expense.splits.get(member[0], 0)|vnd }}đ</td>
                             {% endfor %}
-                            <td>
-                                <input form="expense-form-{{ row[0] }}" class="form-control form-control-sm total-input fw-bold" type="number" min="0" step="1" name="amount" value="{{ row[3]|int }}">
-                                <div class="small split-status"></div>
-                            </td>
+                            <td class="fw-bold">{{ row[3]|vnd }}đ</td>
                             <td class="expense-actions">
-                                <button form="expense-form-{{ row[0] }}" class="btn btn-sm btn-primary mb-1 w-100" data-loading-text="Đang lưu...">Lưu</button>
                                 <form action="{{ url_for('delete_expense', trip_id=trip[0], expense_id=row[0]) }}" method="POST" onsubmit="return confirm('Xóa khoản chi này?')">
                                     <button class="btn btn-sm btn-outline-danger w-100">Xóa</button>
                                 </form>
@@ -473,21 +559,41 @@
 {% endblock %}
 {% block scripts %}
 <script>
+function parseMoneyValue(value) {
+    return Number(String(value || '0').replace(/[^\d-]/g, '')) || 0;
+}
+
+function formatMoneyValue(value) {
+    if (String(value || '').trim() === '') return '';
+    const parsed = parseMoneyValue(value);
+    return parsed.toLocaleString('en-US');
+}
+
 function updateSplitStatus(row) {
     const splitInputs = row.querySelectorAll('.split-input');
     const totalInput = row.querySelector('.total-input');
     const status = row.querySelector('.split-status');
     if (!totalInput || !status) return;
     let sum = 0;
-    splitInputs.forEach(input => sum += Number(input.value || 0));
-    const total = Number(totalInput.value || 0);
+    splitInputs.forEach(input => sum += parseMoneyValue(input.value));
+    const total = parseMoneyValue(totalInput.value);
     const ok = sum === total;
     status.textContent = ok ? 'Đủ: ' + sum.toLocaleString('en-US') + 'đ' : 'Lệch: ' + (sum - total).toLocaleString('en-US') + 'đ';
     status.className = 'small split-status ' + (ok ? 'text-success' : 'text-danger');
 }
-document.querySelectorAll('.expense-table tbody tr').forEach(row => {
+document.querySelectorAll('.expense-edit-table tbody tr').forEach(row => {
     row.addEventListener('input', () => updateSplitStatus(row));
     updateSplitStatus(row);
+});
+
+document.querySelectorAll('.money-input').forEach(input => {
+    input.addEventListener('input', function() {
+        const formatted = formatMoneyValue(this.value);
+        this.value = formatted;
+        const row = this.closest('tr');
+        if (row) updateSplitStatus(row);
+    });
+    if (input.value) input.value = formatMoneyValue(input.value);
 });
 
 function copyMemberEmails(button) {
@@ -564,7 +670,7 @@ function updatePrivateMemberField() {
 function updatePrivateSplitTotal() {
     if (!privateSplitTotal) return;
     let sum = 0;
-    privateSplitInputs.forEach(input => sum += Number(input.value || 0));
+    privateSplitInputs.forEach(input => sum += parseMoneyValue(input.value));
     privateSplitTotal.textContent = sum.toLocaleString('en-US');
 }
 

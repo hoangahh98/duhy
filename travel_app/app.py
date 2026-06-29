@@ -499,6 +499,61 @@ def update_expense(trip_id, expense_id):
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
 
+@app.route("/chuyen-di/<int:trip_id>/chi/cap-nhat-hang-loat", methods=["POST"])
+@admin_required
+def update_expenses_bulk(trip_id):
+    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+        return "Không có quyền", 403
+    members = FinanceModel.members(trip_id)
+    member_ids = [member[0] for member in members]
+    expenses = FinanceModel.expenses(trip_id)
+    updates = []
+    try:
+        for expense in expenses:
+            row = expense["row"]
+            expense_id = row[0]
+            title = request.form.get(f"title_{expense_id}", "").strip()
+            if title not in EXPENSE_CATEGORIES:
+                raise ValueError(f"Nội dung khoản chi #{expense_id} không hợp lệ")
+            amount = money(request.form.get(f"amount_{expense_id}"))
+            split_updates = [
+                {"member_id": member_id, "amount": request.form.get(f"split_{expense_id}_{member_id}")}
+                for member_id in member_ids
+            ]
+            total_split = sum(money(item["amount"]) for item in split_updates)
+            if total_split != amount:
+                raise ValueError(f"{title}: tổng tiền chia ({total_split:,.0f}) phải bằng tổng chi ({amount:,.0f})")
+            try:
+                paid_by_member_id = int(request.form.get(f"paid_by_member_id_{expense_id}"))
+            except (TypeError, ValueError):
+                paid_by_member_id = None
+            if paid_by_member_id not in member_ids:
+                raise ValueError(f"{title}: cần chọn người trả tiền hợp lệ")
+            updates.append({
+                "expense_id": expense_id,
+                "title": title,
+                "spent_date": request.form.get(f"spent_date_{expense_id}") or date.today().isoformat(),
+                "amount": amount,
+                "note": request.form.get(f"note_{expense_id}", ""),
+                "paid_by_member_id": paid_by_member_id,
+                "splits": split_updates,
+            })
+        for item in updates:
+            FinanceModel.update_expense_splits(
+                item["expense_id"],
+                item["title"],
+                item["spent_date"],
+                item["amount"],
+                item["note"],
+                item["paid_by_member_id"],
+                item["splits"],
+            )
+        flash(f"Đã cập nhật {len(updates)} khoản chi.", "success")
+    except ValueError as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("trip_detail", trip_id=trip_id))
+
+
 @app.route("/chuyen-di/<int:trip_id>/chi/<int:expense_id>/xoa", methods=["POST"])
 @admin_required
 def delete_expense(trip_id, expense_id):

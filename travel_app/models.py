@@ -7,7 +7,8 @@ from .db import db_cursor
 
 def money(value):
     try:
-        return Decimal(str(value or "0")).quantize(Decimal("1"))
+        normalized = str(value or "0").strip().replace("đ", "").replace("₫", "").replace(",", "")
+        return Decimal(normalized or "0").quantize(Decimal("1"))
     except (InvalidOperation, ValueError):
         return Decimal("0")
 

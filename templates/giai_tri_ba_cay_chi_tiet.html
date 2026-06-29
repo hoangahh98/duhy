@@ -238,13 +238,6 @@
                         <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/dat-cuoc">
                             <label class="form-label fw-semibold">Điểm cược</label>
                             <input class="form-control mb-2" name="amount" type="number" min="{{ game[3] }}" {% if game[4] %}max="{{ game[4] }}"{% endif %} value="{{ game[3] }}">
-                            <label class="form-label fw-semibold">Hệ số</label>
-                            <select class="form-select mb-2" name="multiplier">
-                                <option value="1">x1</option>
-                                <option value="2">x2</option>
-                                <option value="3">x3</option>
-                                <option value="4">x4</option>
-                            </select>
                             <div class="form-text mb-3">Cược trong {{ bet_seconds }} giây. Hết giờ chưa cược sẽ bị rời bàn.</div>
                             <button class="btn btn-primary w-100" data-loading-text="Đang đặt...">Đặt cược</button>
                         </form>
@@ -262,8 +255,8 @@
                                 {% for p in bettors %}
                                 <div class="border rounded p-2 bg-light">
                                     <div class="fw-semibold">{{ p[1] }}</div>
-                                    <div class="small text-muted mb-2">Cược {{ p[7] }} · Người chơi chọn x{{ p[9] }}</div>
-                                    <label class="form-label small fw-semibold">Hệ số chương chọn</label>
+                                    <div class="small text-muted mb-2">Cược {{ p[7] }}</div>
+                                    <label class="form-label small fw-semibold">Hệ số trả thưởng</label>
                                     <select class="form-select form-select-sm mb-2" name="banker_multiplier_{{ p[0] }}">
                                         <option value="1">x1</option>
                                         <option value="2">x2</option>
@@ -307,7 +300,7 @@
                                         <span class="badge text-bg-light">Ghế {{ p[5] or loop.index }}</span>
                                         {% if p[0] == game[6] %}<span class="badge bg-warning text-dark">Chương</span>{% endif %}
                                         {% if my_participant_id == p[0] %}<span class="badge bg-primary">Bạn</span>{% endif %}
-                                        {% if game[2] == 'betting' and p[0] != game[6] and p[8] %}<span class="badge bg-success">Đã cược x{{ p[9] }}</span>{% endif %}
+                                        {% if game[2] == 'betting' and p[0] != game[6] and p[8] %}<span class="badge bg-success">Đã cược</span>{% endif %}
                                     </div>
                                     <div class="fw-semibold small seat-name">{{ p[1] }}</div>
                                     <div class="bet-box">
@@ -316,7 +309,7 @@
                                         <div class="fw-bold text-warning">Chương</div>
                                         {% else %}
                                         <div class="text-muted small">Cược</div>
-                                        <div class="fw-bold bet-value">{{ p[7] }}{% if p[8] %}<span class="fs-6"> x{{ p[9] }}</span>{% endif %}</div>
+                                        <div class="fw-bold bet-value">{{ p[7] }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -335,11 +328,6 @@
                                 <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
                                 <div class="text-muted small">Điểm cộng/trừ sau từng ván 3 cây.</div>
                             </div>
-                            {% if game[2] in ('setup', 'settling') and participants %}
-                            <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/ket-thuc" onsubmit="return confirm('Kết thúc bàn 3 cây này?');">
-                                <button class="btn btn-warning" data-loading-text="Đang kết thúc...">Kết thúc bàn</button>
-                            </form>
-                            {% endif %}
                         </div>
                         {% if scoreboard %}
                             <div class="list-group list-group-flush">

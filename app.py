@@ -639,8 +639,12 @@ def toi_thang_to_lieng(game_id):
         flash('Bạn chưa có trong bàn này.', 'danger')
         return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
     try:
-        winner_name, pot = EntertainmentLiengGameModel.declare_winner(game_id, participant_id)
-        flash(f'{winner_name} đã thắng pot {pot}.', 'success')
+        winner_name, pot = EntertainmentLiengGameModel.declare_winner(
+            game_id,
+            participant_id,
+            request.form.get('win_multiplier', 1),
+        )
+        flash(f'{winner_name} đã thắng {pot} điểm.', 'success')
     except ValueError as e:
         flash(str(e), 'warning')
     return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
@@ -888,7 +892,7 @@ def dat_cuoc_ba_cay(game_id):
         flash('Bạn chưa có trong bàn này.', 'danger')
         return redirect(url_for('chi_tiet_ban_ba_cay', game_id=game_id))
     try:
-        EntertainmentBaCayGameModel.place_bet(game_id, participant_id, request.form.get('amount'), request.form.get('multiplier'))
+        EntertainmentBaCayGameModel.place_bet(game_id, participant_id, request.form.get('amount'))
         flash('Đã đặt cược.', 'success')
     except ValueError as e:
         flash(str(e), 'warning')

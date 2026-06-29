@@ -74,6 +74,17 @@
             justify-content: space-between;
             gap: .35rem;
         }
+        .lieng-history-x3 {
+            background: #ffe8a3;
+            border-color: #ffc94f;
+            box-shadow: inset 4px 0 0 #ffc107;
+        }
+        .lieng-history-x4 {
+            background: #ffd166;
+            border-color: #ffad1f;
+            box-shadow: inset 5px 0 0 #ff8c00, 0 0 0 2px rgba(255, 193, 7, .2);
+            font-weight: 700;
+        }
         .bet-value {
             color: #15803d;
             font-size: 1.4rem;
@@ -266,7 +277,15 @@
                         </div>
                         {% if can_claim_showdown_win %}
                             <form method="post" action="/giai-tri/to-lieng/{{ game[0] }}/toi-thang">
-                                <button class="btn btn-warning w-100 fw-bold" data-loading-text="Đang xác nhận...">Tôi thắng</button>
+                                <button class="btn btn-warning w-100 fw-bold mb-2" name="win_multiplier" value="1" data-loading-text="Đang xác nhận...">Tôi thắng</button>
+                                <div class="row g-2">
+                                    <div class="col-6 d-grid">
+                                        <button class="btn btn-outline-warning fw-bold" name="win_multiplier" value="3" data-loading-text="Đang xác nhận...">x3</button>
+                                    </div>
+                                    <div class="col-6 d-grid">
+                                        <button class="btn btn-outline-danger fw-bold" name="win_multiplier" value="4" data-loading-text="Đang xác nhận...">x4</button>
+                                    </div>
+                                </div>
                             </form>
                         {% else %}
                             <div class="text-muted small">Chỉ người còn trong ván cân điểm mới xác nhận thắng được.</div>
@@ -321,11 +340,6 @@
                                 <h2 class="h5 fw-bold mb-1">Bảng xếp hạng</h2>
                                 <div class="text-muted small">Tổng điểm lũy kế sau các ván. Phần này tách riêng với pot/cược đang chơi.</div>
                             </div>
-                            {% if game[2] == 'setup' and participants %}
-                            <form method="post" action="/giai-tri/to-lieng/{{ game[0] }}/ket-thuc" onsubmit="return confirm('Kết thúc bàn tố liêng này?');">
-                                <button class="btn btn-warning" data-loading-text="Đang kết thúc...">Kết thúc bàn</button>
-                            </form>
-                            {% endif %}
                         </div>
                         {% if scoreboard %}
                             <div class="list-group list-group-flush">
@@ -359,7 +373,8 @@
                         {% if actions %}
                             <div class="list-group">
                             {% for action in actions %}
-                                <div class="list-group-item">
+                                {% set action_text = (action[4] or '') %}
+                                <div class="list-group-item {% if 'x4' in action_text %}lieng-history-x4{% elif 'x3' in action_text %}lieng-history-x3{% endif %}">
                                     <span class="fw-semibold">{{ action[6] or 'Hệ thống' }}</span>
                                     <span class="text-muted small"> · ván {{ action[1] }} · {{ action[2] }}{% if action[3] %} {{ action[3] }}{% endif %}</span>
                                     {% if action[4] %}<div class="text-muted small">{{ action[4] }}</div>{% endif %}

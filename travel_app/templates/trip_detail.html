@@ -266,7 +266,7 @@
                             <div class="border rounded bg-light overflow-hidden">
                                 <div class="table-responsive frozen-table-wrap">
                                     <table class="table table-sm align-middle mb-0 frozen-table">
-                                        <thead class="table-secondary"><tr><th class="sticky-col" style="width:35%">Thành viên</th><th style="width:30%">Số tiền thu</th><th>Gợi ý đủ</th><th>Ghi chú</th></tr></thead>
+                                        <thead class="table-secondary"><tr><th class="sticky-col" style="width:35%">Thành viên</th><th style="width:30%">Số tiền thu</th><th>Ghi chú</th></tr></thead>
                                         <tbody>
                                             {% for member in members %}
                                             <tr>
@@ -277,7 +277,6 @@
                                                         <span class="input-group-text">đ</span>
                                                     </div>
                                                 </td>
-                                                <td class="small text-muted">{{ summary.paid_enough_targets[member[0]]|vnd }}đ</td>
                                                 <td><input class="form-control form-control-sm" name="collection_note_{{ member[0] }}" value="{{ member[5] }}"></td>
                                             </tr>
                                             {% endfor %}
@@ -292,13 +291,12 @@
                     </div>
                     <div class="table-responsive frozen-table-wrap">
                         <table class="table table-hover align-middle mb-0 frozen-table">
-                            <thead class="table-light"><tr><th class="sticky-col">Thành viên</th><th>Số tiền thu</th><th>Gợi ý đủ</th><th>Ghi chú</th></tr></thead>
+                            <thead class="table-light"><tr><th class="sticky-col">Thành viên</th><th>Số tiền thu</th><th>Ghi chú</th></tr></thead>
                             <tbody>
                                 {% for member in members %}
                                 <tr>
                                     <td class="fw-semibold sticky-col">{{ member[1] }}</td>
                                     <td>{{ member[4]|vnd }}đ</td>
-                                    <td class="small text-muted">{{ summary.paid_enough_targets[member[0]]|vnd }}đ</td>
                                     <td>{{ member[5] }}</td>
                                 </tr>
                                 {% endfor %}

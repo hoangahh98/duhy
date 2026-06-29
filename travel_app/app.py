@@ -17,6 +17,22 @@ EXPENSE_CATEGORIES = ("Khách sạn", "Ẩm thực", "Vui chơi", "Thể thao", 
 def _limit_text(value, limit):
     return (value or "").strip()[:limit]
 
+
+def _sync_treasurer_collection(trip_id, treasurer_member_id=None, note=None):
+    if not treasurer_member_id:
+        return
+    members = FinanceModel.members(trip_id)
+    expenses = FinanceModel.expenses(trip_id)
+    summary = build_summary(members, expenses, treasurer_member_id)
+    treasurer = next((member for member in members if member[0] == treasurer_member_id), None)
+    if not treasurer:
+        return
+    FinanceModel.update_collections(trip_id, [{
+        "member_id": treasurer_member_id,
+        "amount": summary["paid_enough_targets"].get(treasurer_member_id, money(0)),
+        "note": treasurer[5] if note is None else note,
+    }])
+
 with app.app_context():
     init_schema()
 
@@ -363,7 +379,13 @@ def delete_member(trip_id, member_id):
 def update_treasurer(trip_id):
     if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
         return "Không có quyền", 403
-    TripModel.update_treasurer(trip_id, request.form.get("treasurer_member_id"))
+    treasurer_member_id = request.form.get("treasurer_member_id")
+    TripModel.update_treasurer(trip_id, treasurer_member_id)
+    try:
+        treasurer_member_id = int(treasurer_member_id) if treasurer_member_id else None
+    except (TypeError, ValueError):
+        treasurer_member_id = None
+    _sync_treasurer_collection(trip_id, treasurer_member_id)
     flash("Đã cập nhật thủ quỹ chuyến đi.", "success")
     return redirect(url_for("trip_detail", trip_id=trip_id))
 
@@ -390,14 +412,22 @@ def update_member(trip_id, member_id):
 @app.route("/chuyen-di/<int:trip_id>/thu", methods=["POST"])
 @admin_required
 def update_collections(trip_id):
-    if not TripModel.get_for_admin(trip_id, admin_scope_id(session["user"])):
+    trip = TripModel.get_for_admin(trip_id, admin_scope_id(session["user"]))
+    if not trip:
         return "Không có quyền", 403
+    treasurer_member_id = trip[6] if len(trip) > 6 else None
+    members = FinanceModel.members(trip_id)
+    expenses = FinanceModel.expenses(trip_id)
+    summary = build_summary(members, expenses, treasurer_member_id)
     updates = []
-    for member in FinanceModel.members(trip_id):
+    for member in members:
         member_id = member[0]
+        amount = money(request.form.get(f"collection_{member_id}"))
+        if treasurer_member_id and member_id == treasurer_member_id:
+            amount = summary["paid_enough_targets"].get(member_id, money(0))
         updates.append({
             "member_id": member_id,
-            "amount": money(request.form.get(f"collection_{member_id}")),
+            "amount": amount,
             "note": request.form.get(f"collection_note_{member_id}", ""),
         })
     FinanceModel.update_collections(trip_id, updates)

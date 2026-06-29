@@ -280,8 +280,8 @@
                                                 <td>
                                                     <div class="input-group input-group-sm">
                                                         {% if trip[6] == member[0] %}
-                                                        <input type="hidden" name="collection_{{ member[0] }}" value="{{ summary.paid_enough_targets[member[0]]|vnd }}">
-                                                        <input class="form-control money-input bg-light" inputmode="decimal" value="{{ summary.paid_enough_targets[member[0]]|vnd }}" disabled>
+                                                        <input type="hidden" name="collection_{{ member[0] }}" value="{{ summary.member_spent[member[0]]|vnd }}">
+                                                        <input class="form-control money-input bg-light" inputmode="decimal" value="{{ summary.member_spent[member[0]]|vnd }}" disabled>
                                                         {% else %}
                                                         <input class="form-control money-input" name="collection_{{ member[0] }}" inputmode="decimal" value="{{ member[4]|vnd }}">
                                                         {% endif %}

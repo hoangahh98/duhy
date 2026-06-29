@@ -1068,7 +1068,7 @@ def build_summary(members, expenses, treasurer_member_id=None):
         member_id = member[0]
         collected = money(member[4])
         if treasurer_member_id and member_id == treasurer_member_id:
-            collected = paid_enough_targets.get(member_id, Decimal("0"))
+            collected = member_spent.get(member_id, Decimal("0"))
         effective_collected[member_id] = collected
     total_collected = sum(effective_collected.values(), Decimal("0"))
     gross_credit = {

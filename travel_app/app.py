@@ -29,7 +29,7 @@ def _sync_treasurer_collection(trip_id, treasurer_member_id=None, note=None):
         return
     FinanceModel.update_collections(trip_id, [{
         "member_id": treasurer_member_id,
-        "amount": summary["paid_enough_targets"].get(treasurer_member_id, money(0)),
+        "amount": summary["member_spent"].get(treasurer_member_id, money(0)),
         "note": treasurer[5] if note is None else note,
     }])
 
@@ -424,7 +424,7 @@ def update_collections(trip_id):
         member_id = member[0]
         amount = money(request.form.get(f"collection_{member_id}"))
         if treasurer_member_id and member_id == treasurer_member_id:
-            amount = summary["paid_enough_targets"].get(member_id, money(0))
+            amount = summary["member_spent"].get(member_id, money(0))
         updates.append({
             "member_id": member_id,
             "amount": amount,
@@ -447,9 +447,12 @@ def mark_collections_paid_enough(trip_id):
     updates = []
     for member in members:
         member_id = member[0]
+        amount = summary["paid_enough_targets"].get(member_id, money(0))
+        if len(trip) > 6 and trip[6] == member_id:
+            amount = summary["member_spent"].get(member_id, money(0))
         updates.append({
             "member_id": member_id,
-            "amount": summary["paid_enough_targets"].get(member_id, money(0)),
+            "amount": amount,
             "note": member[5],
         })
     FinanceModel.update_collections(trip_id, updates)

@@ -1748,7 +1748,7 @@ class EntertainmentBaCayGameModel:
             where_active = "AND active = TRUE" if active_only else ""
             cursor.execute(f"""
                 SELECT id, display_name, user_role, admin_id, user_client_id, seat_no,
-                       active, current_bet, bet_submitted, score, last_action_at
+                       active, current_bet, bet_submitted, current_multiplier, score, last_action_at
                 FROM entertainment_ba_cay_participants
                 WHERE game_id = %s {where_active}
                 ORDER BY COALESCE(seat_no, 9999), id;
@@ -1831,7 +1831,7 @@ class EntertainmentBaCayGameModel:
                     VALUES (%s, %s, 'admin', %s)
                     ON CONFLICT (game_id, admin_id) WHERE admin_id IS NOT NULL
                     DO UPDATE SET active = TRUE, display_name = EXCLUDED.display_name,
-                                  current_bet = 0, bet_submitted = FALSE, seat_no = NULL
+                                  current_bet = 0, bet_submitted = FALSE, current_multiplier = 1, seat_no = NULL
                     RETURNING id;
                 """, (game_id, display_name, user.get("id")))
             else:
@@ -1840,7 +1840,7 @@ class EntertainmentBaCayGameModel:
                     VALUES (%s, %s, 'vdv', %s)
                     ON CONFLICT (game_id, user_client_id) WHERE user_client_id IS NOT NULL
                     DO UPDATE SET active = TRUE, display_name = EXCLUDED.display_name,
-                                  current_bet = 0, bet_submitted = FALSE, seat_no = NULL
+                                  current_bet = 0, bet_submitted = FALSE, current_multiplier = 1, seat_no = NULL
                     RETURNING id;
                 """, (game_id, display_name, user.get("id")))
             participant_id = cursor.fetchone()[0]
@@ -1872,7 +1872,7 @@ class EntertainmentBaCayGameModel:
             participant_id, display_name = participant
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET active = FALSE, current_bet = 0, bet_submitted = FALSE, seat_no = NULL
+                SET active = FALSE, current_bet = 0, bet_submitted = FALSE, current_multiplier = 1, seat_no = NULL
                 WHERE id = %s;
             """, (participant_id,))
             if game[1] == participant_id:
@@ -1972,12 +1972,12 @@ class EntertainmentBaCayGameModel:
             banker_id = game[1] if game[1] in ids else ids[0]
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET current_bet = 0, bet_submitted = FALSE, last_action_at = NULL
+                SET current_bet = 0, bet_submitted = FALSE, current_multiplier = 1, last_action_at = NULL
                 WHERE game_id = %s AND active = TRUE;
             """, (game_id,))
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET current_bet = 0, bet_submitted = TRUE, last_action_at = CURRENT_TIMESTAMP
+                SET current_bet = 0, bet_submitted = TRUE, current_multiplier = 1, last_action_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
             """, (banker_id,))
             cursor.execute("""
@@ -2015,7 +2015,7 @@ class EntertainmentBaCayGameModel:
             for participant_id, display_name in kicked:
                 cursor.execute("""
                     UPDATE entertainment_ba_cay_participants
-                    SET active = FALSE, current_bet = 0, bet_submitted = FALSE, seat_no = NULL, last_action_at = CURRENT_TIMESTAMP
+                    SET active = FALSE, current_bet = 0, bet_submitted = FALSE, current_multiplier = 1, seat_no = NULL, last_action_at = CURRENT_TIMESTAMP
                     WHERE id = %s;
                 """, (participant_id,))
                 cursor.execute("""
@@ -2028,21 +2028,38 @@ class EntertainmentBaCayGameModel:
                 WHERE game_id = %s AND active = TRUE AND id <> %s AND bet_submitted = TRUE;
             """, (game_id, banker_id))
             bettor_count = cursor.fetchone()[0]
-            cursor.execute("""
-                UPDATE entertainment_ba_cay_games
-                SET status = 'settling', bet_deadline_at = NULL
-                WHERE id = %s;
-            """, (game_id,))
             if bettor_count <= 0:
                 cursor.execute("""
+                    UPDATE entertainment_ba_cay_participants
+                    SET current_bet = 0, bet_submitted = FALSE, current_multiplier = 1
+                    WHERE game_id = %s AND active = TRUE;
+                """, (game_id,))
+                cursor.execute("""
+                    UPDATE entertainment_ba_cay_games
+                    SET status = 'setup', bet_deadline_at = NULL
+                    WHERE id = %s;
+                """, (game_id,))
+                cursor.execute("""
                     INSERT INTO entertainment_ba_cay_actions (game_id, participant_id, round_no, action_type, note)
-                    VALUES (%s, %s, %s, 'settling', 'Không còn người cược, chờ bắt đầu ván mới');
+                    VALUES (%s, %s, %s, 'round_reset', 'Không còn người cược, ván tự kết thúc');
                 """, (game_id, banker_id, round_no))
+            else:
+                cursor.execute("""
+                    UPDATE entertainment_ba_cay_games
+                    SET status = 'settling', bet_deadline_at = NULL
+                    WHERE id = %s;
+                """, (game_id,))
             return True
 
     @staticmethod
-    def place_bet(game_id, participant_id, amount):
+    def place_bet(game_id, participant_id, amount, multiplier=1):
         amount = int(amount or 0)
+        try:
+            multiplier = int(multiplier or 1)
+        except (TypeError, ValueError):
+            multiplier = 1
+        if multiplier not in (1, 2, 3):
+            raise ValueError("Hệ số cược không hợp lệ.")
         with db_cursor(commit=True) as cursor:
             cursor.execute("""
                 SELECT status, min_bet, max_bet, banker_participant_id, round_no
@@ -2063,18 +2080,19 @@ class EntertainmentBaCayGameModel:
                 raise ValueError("Điểm cược vượt max.")
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET current_bet = %s, bet_submitted = TRUE, last_action_at = CURRENT_TIMESTAMP
+                SET current_bet = %s, bet_submitted = TRUE, current_multiplier = %s, last_action_at = CURRENT_TIMESTAMP
                 WHERE id = %s AND game_id = %s AND active = TRUE;
-            """, (amount, participant_id, game_id))
+            """, (amount, multiplier, participant_id, game_id))
             if cursor.rowcount <= 0:
                 raise ValueError("Bạn chưa có trong bàn này.")
             cursor.execute("""
-                INSERT INTO entertainment_ba_cay_actions (game_id, participant_id, round_no, action_type, amount)
-                VALUES (%s, %s, %s, 'bet', %s);
-            """, (game_id, participant_id, round_no, amount))
+                INSERT INTO entertainment_ba_cay_actions (game_id, participant_id, round_no, action_type, amount, note)
+                VALUES (%s, %s, %s, 'bet', %s, %s);
+            """, (game_id, participant_id, round_no, amount, f"Chọn x{multiplier}"))
 
     @staticmethod
-    def settle_round(game_id, banker_id, results):
+    def settle_round(game_id, banker_id, results, banker_multipliers=None):
+        banker_multipliers = banker_multipliers or {}
         with db_cursor(commit=True) as cursor:
             cursor.execute("""
                 SELECT status, banker_participant_id, round_no
@@ -2105,7 +2123,7 @@ class EntertainmentBaCayGameModel:
                 if cursor.fetchone()[0] > 0:
                     raise ValueError("Chưa hết thời gian cược hoặc còn người chưa đặt cược.")
             cursor.execute("""
-                SELECT id, display_name, current_bet
+                SELECT id, display_name, current_bet, current_multiplier
                 FROM entertainment_ba_cay_participants
                 WHERE game_id = %s AND active = TRUE AND id <> %s AND bet_submitted = TRUE AND current_bet > 0;
             """, (game_id, banker_id))
@@ -2119,20 +2137,27 @@ class EntertainmentBaCayGameModel:
                 return 0
             valid_ids = {row[0] for row in players}
             settled_count = 0
-            for player_id, display_name, bet in players:
+            for player_id, display_name, bet, player_multiplier in players:
                 result = results.get(player_id)
                 if result not in ('win', 'lose'):
                     raise ValueError(f"Cần chọn thắng/thua cho {display_name}.")
-                delta = int(bet)
+                try:
+                    banker_multiplier = int(banker_multipliers.get(player_id, 1) or 1)
+                except (TypeError, ValueError):
+                    banker_multiplier = 1
+                if banker_multiplier not in (1, 2, 3):
+                    raise ValueError(f"Hệ số chương chọn cho {display_name} không hợp lệ.")
+                multiplier = max(int(player_multiplier or 1), banker_multiplier)
+                delta = int(bet) * multiplier
                 if result == 'win':
                     cursor.execute("UPDATE entertainment_ba_cay_participants SET score = score + %s WHERE id = %s;", (delta, player_id))
                     cursor.execute("UPDATE entertainment_ba_cay_participants SET score = score - %s WHERE id = %s;", (delta, banker_id))
-                    note = f"{display_name} thắng chương"
+                    note = f"{display_name} thắng chương x{multiplier}"
                     action_type = 'player_win'
                 else:
                     cursor.execute("UPDATE entertainment_ba_cay_participants SET score = score - %s WHERE id = %s;", (delta, player_id))
                     cursor.execute("UPDATE entertainment_ba_cay_participants SET score = score + %s WHERE id = %s;", (delta, banker_id))
-                    note = f"{display_name} thua chương"
+                    note = f"{display_name} thua chương x{multiplier}"
                     action_type = 'player_lose'
                 cursor.execute("""
                     INSERT INTO entertainment_ba_cay_actions (
@@ -2146,12 +2171,12 @@ class EntertainmentBaCayGameModel:
                 raise ValueError("Có người chơi không hợp lệ trong kết quả.")
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET current_bet = 0, bet_submitted = FALSE
+                SET current_bet = 0, bet_submitted = FALSE, current_multiplier = 1
                 WHERE game_id = %s AND active = TRUE;
             """, (game_id,))
             cursor.execute("""
                 UPDATE entertainment_ba_cay_participants
-                SET bet_submitted = TRUE
+                SET bet_submitted = TRUE, current_multiplier = 1
                 WHERE id = %s;
             """, (banker_id,))
             cursor.execute("""

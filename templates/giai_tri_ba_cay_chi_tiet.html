@@ -194,12 +194,6 @@
                             </form>
                         {% endif %}
                         {% if game[2] == 'setup' %}
-                        <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/quay-vi-tri" class="mb-2">
-                            <button class="btn btn-outline-success w-100" data-loading-text="Đang quay...">Quay vị trí</button>
-                        </form>
-                        <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/quay-chuong" class="mb-2">
-                            <button class="btn btn-outline-warning w-100" data-loading-text="Đang quay...">Quay ngẫu nhiên chương</button>
-                        </form>
                         {% if my_participant_id and my_participant_id == game[6] %}
                         <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/chon-chuong" class="mb-2">
                             <label class="form-label fw-semibold small">Chọn người làm chương</label>
@@ -225,6 +219,12 @@
                         <form method="post" action="/giai-tri/ba-cay/{{ game[0] }}/dat-cuoc">
                             <label class="form-label fw-semibold">Điểm cược</label>
                             <input class="form-control mb-2" name="amount" type="number" min="{{ game[3] }}" {% if game[4] %}max="{{ game[4] }}"{% endif %} value="{{ game[3] }}">
+                            <label class="form-label fw-semibold">Hệ số</label>
+                            <select class="form-select mb-2" name="multiplier">
+                                <option value="1">x1</option>
+                                <option value="2">x2</option>
+                                <option value="3">x3</option>
+                            </select>
                             <div class="form-text mb-3">Cược trong {{ bet_seconds }} giây. Hết giờ chưa cược sẽ bị rời bàn.</div>
                             <button class="btn btn-primary w-100" data-loading-text="Đang đặt...">Đặt cược</button>
                         </form>
@@ -242,7 +242,13 @@
                                 {% for p in bettors %}
                                 <div class="border rounded p-2 bg-light">
                                     <div class="fw-semibold">{{ p[1] }}</div>
-                                    <div class="small text-muted mb-2">Cược {{ p[7] }}</div>
+                                    <div class="small text-muted mb-2">Cược {{ p[7] }} · Người chơi chọn x{{ p[9] }}</div>
+                                    <label class="form-label small fw-semibold">Hệ số chương chọn</label>
+                                    <select class="form-select form-select-sm mb-2" name="banker_multiplier_{{ p[0] }}">
+                                        <option value="1">x1</option>
+                                        <option value="2">x2</option>
+                                        <option value="3">x3</option>
+                                    </select>
                                     <div class="btn-group w-100" role="group">
                                         <input class="btn-check" type="radio" name="result_{{ p[0] }}" value="win" id="win{{ p[0] }}" required>
                                         <label class="btn btn-outline-success" for="win{{ p[0] }}">Thắng</label>
@@ -280,12 +286,17 @@
                                         <span class="badge text-bg-light">Ghế {{ p[5] or loop.index }}</span>
                                         {% if p[0] == game[6] %}<span class="badge bg-warning text-dark">Chương</span>{% endif %}
                                         {% if my_participant_id == p[0] %}<span class="badge bg-primary">Bạn</span>{% endif %}
-                                        {% if game[2] == 'betting' and p[0] != game[6] and p[8] %}<span class="badge bg-success">Đã cược</span>{% endif %}
+                                        {% if game[2] == 'betting' and p[0] != game[6] and p[8] %}<span class="badge bg-success">Đã cược x{{ p[9] }}</span>{% endif %}
                                     </div>
                                     <div class="fw-semibold small seat-name">{{ p[1] }}</div>
                                     <div class="bet-box">
+                                        {% if p[0] == game[6] %}
+                                        <div class="text-muted small">Vai trò</div>
+                                        <div class="fw-bold text-warning">Chương</div>
+                                        {% else %}
                                         <div class="text-muted small">Cược</div>
-                                        <div class="fw-bold bet-value">{{ p[7] }}</div>
+                                        <div class="fw-bold bet-value">{{ p[7] }}{% if p[8] %}<span class="fs-6"> x{{ p[9] }}</span>{% endif %}</div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% endfor %}
@@ -371,7 +382,7 @@
         my_participant_id: {{ my_participant_id|tojson }},
         participants: [
             {% for p in participants %}
-            {id: {{ p[0]|tojson }}, current_bet: {{ p[7]|tojson }}, bet_submitted: {{ p[8]|tojson }}, score: {{ p[9]|tojson }}}{% if not loop.last %},{% endif %}
+            {id: {{ p[0]|tojson }}, current_bet: {{ p[7]|tojson }}, bet_submitted: {{ p[8]|tojson }}, current_multiplier: {{ p[9]|tojson }}, score: {{ p[10]|tojson }}}{% if not loop.last %},{% endif %}
             {% endfor %}
         ]
     });
@@ -415,6 +426,7 @@
                     id: player.id,
                     current_bet: player.current_bet,
                     bet_submitted: player.bet_submitted,
+                    current_multiplier: player.current_multiplier,
                     score: player.score
                 };
             })

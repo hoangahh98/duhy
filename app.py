@@ -748,7 +748,8 @@ def _ba_cay_state_payload(game_id, user):
                 'active': bool(p[6]),
                 'current_bet': p[7],
                 'bet_submitted': bool(p[8]),
-                'score': p[9],
+                'current_multiplier': p[9],
+                'score': p[10],
             }
             for p in participants
         ],
@@ -882,7 +883,7 @@ def dat_cuoc_ba_cay(game_id):
         flash('Bạn chưa có trong bàn này.', 'danger')
         return redirect(url_for('chi_tiet_ban_ba_cay', game_id=game_id))
     try:
-        EntertainmentBaCayGameModel.place_bet(game_id, participant_id, request.form.get('amount'))
+        EntertainmentBaCayGameModel.place_bet(game_id, participant_id, request.form.get('amount'), request.form.get('multiplier'))
         flash('Đã đặt cược.', 'success')
     except ValueError as e:
         flash(str(e), 'warning')
@@ -900,13 +901,15 @@ def chot_van_ba_cay(game_id):
     try:
         participants = EntertainmentBaCayGameModel.get_participants(game_id)
         results = {}
+        banker_multipliers = {}
         for player in participants:
             if player[0] == participant_id:
                 continue
             value = request.form.get(f'result_{player[0]}')
             if value in ('win', 'lose'):
                 results[player[0]] = value
-        settled_count = EntertainmentBaCayGameModel.settle_round(game_id, participant_id, results)
+                banker_multipliers[player[0]] = request.form.get(f'banker_multiplier_{player[0]}')
+        settled_count = EntertainmentBaCayGameModel.settle_round(game_id, participant_id, results, banker_multipliers)
         flash(f'Đã chốt {settled_count} người. Ván đã kết thúc, chờ bấm bắt đầu ván mới.', 'success')
     except ValueError as e:
         flash(str(e), 'warning')

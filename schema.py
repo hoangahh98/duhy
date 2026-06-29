@@ -508,10 +508,14 @@ CREATE TABLE IF NOT EXISTS entertainment_ba_cay_participants (
     active BOOLEAN NOT NULL DEFAULT TRUE,
     current_bet INTEGER NOT NULL DEFAULT 0,
     bet_submitted BOOLEAN NOT NULL DEFAULT FALSE,
+    current_multiplier INTEGER NOT NULL DEFAULT 1,
     score INTEGER NOT NULL DEFAULT 0,
     last_action_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE entertainment_ba_cay_participants
+ADD COLUMN IF NOT EXISTS current_multiplier INTEGER NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS entertainment_ba_cay_actions (
     id SERIAL PRIMARY KEY,

@@ -1416,6 +1416,31 @@ class EntertainmentLiengGameModel:
             return False
         if int(previous_bet or 0) >= highest_bet:
             return False
+        return EntertainmentLiengGameModel._move_to_showdown(
+            cursor,
+            game_id,
+            participant_id,
+            'Đã cân điểm, chờ người thắng xác nhận'
+        )
+
+    @staticmethod
+    def _move_to_showdown_if_remaining_balanced(cursor, game_id, participant_id, note):
+        cursor.execute("""
+            SELECT id, current_bet
+            FROM entertainment_lieng_participants
+            WHERE game_id = %s AND active = TRUE AND folded = FALSE
+            ORDER BY COALESCE(seat_no, 9999), id;
+        """, (game_id,))
+        rows = cursor.fetchall()
+        if len(rows) <= 1:
+            return False
+        current_bets = [int(row[1] or 0) for row in rows]
+        if any(bet != current_bets[0] for bet in current_bets):
+            return False
+        return EntertainmentLiengGameModel._move_to_showdown(cursor, game_id, participant_id, note)
+
+    @staticmethod
+    def _move_to_showdown(cursor, game_id, participant_id, note):
         cursor.execute("""
             UPDATE entertainment_lieng_games
             SET status = 'showdown', current_turn_participant_id = NULL, turn_started_at = NULL
@@ -1423,9 +1448,9 @@ class EntertainmentLiengGameModel:
         """, (game_id,))
         cursor.execute("""
             INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, note)
-            SELECT id, %s, round_no, 'showdown', 'Đã cân điểm, chờ người thắng xác nhận'
+            SELECT id, %s, round_no, 'showdown', %s
             FROM entertainment_lieng_games WHERE id = %s;
-        """, (participant_id, game_id))
+        """, (participant_id, note, game_id))
         return True
 
     @staticmethod
@@ -1494,6 +1519,13 @@ class EntertainmentLiengGameModel:
                 FROM entertainment_lieng_games WHERE id = %s;
             """, (participant_id, f"{display_name} quá 60 giây, tự bỏ và rời bàn", game_id))
             if not EntertainmentLiengGameModel._finish_if_one_left(cursor, game_id):
+                if EntertainmentLiengGameModel._move_to_showdown_if_remaining_balanced(
+                    cursor,
+                    game_id,
+                    participant_id,
+                    f"{display_name} rời bàn do quá 60 giây. Những người còn lại đã cân điểm."
+                ):
+                    return True
                 next_id = EntertainmentLiengGameModel._next_turn(cursor, game_id, participant_id)
                 cursor.execute("""
                     UPDATE entertainment_lieng_games

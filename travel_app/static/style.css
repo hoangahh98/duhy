@@ -156,6 +156,36 @@ body {
     min-width: 90px !important;
 }
 
+.frozen-table-wrap {
+    max-height: 75vh;
+    overflow: auto;
+}
+
+.frozen-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.frozen-table .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 170px;
+    background: #fff;
+}
+
+.frozen-table thead .sticky-col {
+    z-index: 4;
+}
+
+.frozen-table thead.table-light .sticky-col,
+.frozen-table .table-light .sticky-col,
+.frozen-table thead.table-secondary .sticky-col,
+.frozen-table .table-secondary .sticky-col {
+    background: #e7f1ff !important;
+}
+
 .compact-form {
     max-width: 760px;
 }

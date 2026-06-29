@@ -39,12 +39,12 @@
                 <div class="card shadow-sm">
                     <div class="card-header bg-primary text-white fw-bold">Danh sách admin</div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="table-responsive frozen-table-wrap">
+                            <table class="table align-middle mb-0 frozen-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:80px">ID</th>
-                                        <th>User admin</th>
+                                        <th class="sticky-col">User admin</th>
                                         <th>Tên admin</th>
                                         <th style="width:340px">Đổi mật khẩu</th>
                                         <th style="width:170px">Thao tác</th>
@@ -55,7 +55,7 @@
                                     {% set is_root = admin[1]|lower == super_admin_email %}
                                     <tr>
                                         <td>{{ admin[0] }}</td>
-                                        <td>
+                                        <td class="sticky-col">
                                             <form id="editAdmin{{ admin[0] }}" action="/admin-settings/{{ admin[0] }}/sua" method="POST">
                                                 <input type="text" class="form-control form-control-sm" name="email" value="{{ admin[1] }}" required>
                                             </form>

@@ -85,11 +85,11 @@
         <div class="card shadow-sm">
             <div class="card-header bg-dark text-white fw-bold">📝 LOGS</div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
+                <div class="table-responsive frozen-table-wrap">
+                    <table class="table table-sm table-hover frozen-table">
                         <thead class="table-dark">
                             <tr>
-                                <th>Time</th>
+                                <th class="sticky-col">Time</th>
                                 <th>Level</th>
                                 <th>Message</th>
                                 <th>User</th>
@@ -101,7 +101,7 @@
                         {% if logs %}
                             {% for log in logs %}
                             <tr class="log-{{ log[1]|lower }}">
-                                <td>
+                                <td class="sticky-col">
                                     <small>{{ log[7].strftime('%Y-%m-%d %H:%M:%S') }}</small>
                                 </td>
                                 <td>
@@ -213,4 +213,3 @@
 {% include '_interaction_feedback.html' %}
 </body>
 </html>
-

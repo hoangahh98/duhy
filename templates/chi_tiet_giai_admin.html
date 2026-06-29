@@ -272,15 +272,15 @@ BTC</textarea>
 
                         <!-- Bảng VĐV đã đăng ký -->
                         {% if registrations %}
-                        <div class="table-responsive mb-2" style="max-height:200px;overflow-y:auto;">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="table-light" style="position:sticky;top:0;">
-                                    <tr><th>Tên VĐV</th><th style="width:50px">Trình</th><th style="width:70px">Đóng phí</th><th style="width:40px"></th></tr>
+                        <div class="table-responsive frozen-table-wrap mb-2" style="max-height:200px;">
+                            <table class="table table-sm table-hover mb-0 frozen-table">
+                                <thead class="table-light">
+                                    <tr><th class="sticky-col">Tên VĐV</th><th style="width:50px">Trình</th><th style="width:70px">Đóng phí</th><th style="width:40px"></th></tr>
                                 </thead>
                                 <tbody>
                                 {% for reg in registrations %}
                                 <tr class="{% if reg[5] and reg[5] >= giai.chi_phi_moi_nguoi %}sufficient-row{% else %}insufficient-row{% endif %}">
-                                    <td class="fw-semibold">{{ reg[2] }}</td>
+                                    <td class="fw-semibold sticky-col">{{ reg[2] }}</td>
                                     <td><span class="badge bg-secondary">{{ reg[3] }}</span></td>
                                     <td class="small text-muted">{{ "{:,.0f}".format(reg[5] or 0) }}đ</td>
                                     <td>
@@ -723,11 +723,11 @@ BTC</textarea>
                       action="/giai-dau/{{ giai.id }}/cap-nhat-tien-hang-loat"
                       method="POST">
                     <div class="border rounded bg-light overflow-hidden">
-                        <div class="table-responsive">
-                        <table class="table table-sm mb-0 align-middle fee-table">
+                        <div class="table-responsive frozen-table-wrap">
+                        <table class="table table-sm mb-0 align-middle fee-table frozen-table">
                             <thead class="table-secondary">
                                 <tr>
-                                    <th style="width:40%">Vận động viên</th>
+                                    <th class="sticky-col" style="width:40%">Vận động viên</th>
                                     <th style="width:25%">Số tiền đã đóng</th>
                                     <th style="width:25%">Trạng thái</th>
                                 </tr>
@@ -735,7 +735,7 @@ BTC</textarea>
                             <tbody>
                             {% for reg in registrations %}
                             <tr>
-                                <td class="fw-semibold">
+                                <td class="fw-semibold sticky-col">
                                     {{ reg[2] }}
                                     <span class="badge bg-secondary ms-1">{{ reg[3] }}</span>
                                 </td>
@@ -778,16 +778,16 @@ BTC</textarea>
 
             <!-- Bảng danh sách -->
             {% if giai.nguoi_choi_list %}
-            <div class="table-responsive">
-            <table class="table table-hover mb-0 fee-table">
+            <div class="table-responsive frozen-table-wrap">
+            <table class="table table-hover mb-0 fee-table frozen-table">
                 <thead class="table-dark"><tr>
-                    <th>Tên</th><th>Trình</th>
+                    <th class="sticky-col">Tên</th><th>Trình</th>
                     <th>Tiền đóng</th><th>Trạng thái</th><th>Ghi chú</th>
                 </tr></thead>
                 <tbody>
                 {% for nc in giai.nguoi_choi_list %}
                 <tr>
-                    <td class="fw-semibold">{{ nc.ten }}</td>
+                    <td class="fw-semibold sticky-col">{{ nc.ten }}</td>
                     <td><span class="badge bg-secondary">{{ nc.trinh_do }}</span></td>
                     <td>{{ "{:,.0f}".format(nc.tien_dong) }}đ</td>
                     <td>
@@ -1539,5 +1539,3 @@ if (manualPairSelects.length) {
 {% include '_interaction_feedback.html' %}
 </body>
 </html>
-
-

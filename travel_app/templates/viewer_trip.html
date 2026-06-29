@@ -14,13 +14,13 @@
     <section class="card mb-3">
         <div class="card-hdr blue">Tổng hợp thành viên</div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light"><tr><th>Tên</th><th>Đã thu</th><th>Ứng trước</th><th>Phần chi</th><th>Chênh lệch</th></tr></thead>
+            <div class="table-responsive frozen-table-wrap">
+                <table class="table align-middle mb-0 frozen-table">
+                    <thead class="table-light"><tr><th class="sticky-col">Tên</th><th>Đã thu</th><th>Ứng trước</th><th>Phần chi</th><th>Chênh lệch</th></tr></thead>
                     <tbody>
                         {% for member in members %}
                         <tr class="{% if member[0] == viewer_member_id %}table-primary{% endif %}">
-                            <td class="fw-semibold">{{ member[1] }}</td>
+                            <td class="fw-semibold sticky-col">{{ member[1] }}</td>
                             <td>{{ member[4]|vnd }}đ</td>
                             <td class="text-success fw-semibold">{{ summary.member_advanced[member[0]]|vnd }}đ</td>
                             <td>{{ summary.member_spent[member[0]]|vnd }}đ</td>

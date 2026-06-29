@@ -64,12 +64,12 @@
         <section class="card">
             <div class="card-hdr blue">Danh sách người chơi</div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="playersTable">
+                <div class="table-responsive frozen-table-wrap">
+                    <table class="table table-hover align-middle mb-0 frozen-table" id="playersTable">
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 48px;">#</th>
-                                <th>Tên</th>
+                                <th class="sticky-col">Tên</th>
                                 <th>Email client</th>
                                 <th style="width: 150px;" class="text-center">Hành động</th>
                             </tr>
@@ -78,7 +78,7 @@
                         {% for player in players %}
                         <tr>
                             <td class="text-muted small">{{ loop.index }}</td>
-                            <td class="fw-semibold">{{ player[1] }}</td>
+                            <td class="fw-semibold sticky-col">{{ player[1] }}</td>
                             <td class="text-muted">{{ player[3] or 'Chưa có' }}</td>
                             <td class="text-center text-nowrap">
                                 <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPlayerModal{{ player[0] }}" data-feedback="off">Sửa</button>

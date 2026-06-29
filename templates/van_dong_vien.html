@@ -81,12 +81,12 @@
         <div class="card-header bg-primary text-white fw-bold">📋 DANH SÁCH VĐV</div>
         <div class="card-body p-0">
             {% if vdv_list %}
-            <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle" id="vdvTable">
+            <div class="table-responsive frozen-table-wrap">
+            <table class="table table-hover mb-0 align-middle frozen-table" id="vdvTable">
                 <thead class="table-dark">
                     <tr>
                         <th style="width:40px">#</th>
-                        <th>Tên VĐV</th>
+                        <th class="sticky-col">Tên VĐV</th>
                         <th style="width:80px">Trình</th>
                         <th>Email</th>
                         <th>Ghi chú</th>
@@ -97,7 +97,7 @@
                 {% for vdv in vdv_list %}
                 <tr data-level="{{ vdv[2] }}">
                     <td class="text-muted small">{{ loop.index }}</td>
-                    <td><strong>{{ vdv[1] }}</strong></td>
+                    <td class="sticky-col"><strong>{{ vdv[1] }}</strong></td>
                     <td>
                         <span class="badge badge-trinh-{{ vdv[2] }}">{{ vdv[2] }}</span>
                     </td>
@@ -147,5 +147,4 @@ document.querySelectorAll('.stat-filter').forEach(button => {
 {% include '_interaction_feedback.html' %}
 </body>
 </html>
-
 

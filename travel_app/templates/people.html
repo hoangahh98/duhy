@@ -34,12 +34,12 @@
     <section class="card">
         <div class="card-hdr blue">Danh sách thành viên</div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="peopleTable">
+            <div class="table-responsive frozen-table-wrap">
+                <table class="table table-hover align-middle mb-0 frozen-table" id="peopleTable">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 48px;">#</th>
-                            <th>Tên</th>
+                            <th class="sticky-col">Tên</th>
                             <th>Email người xem</th>
                             <th style="width: 150px;" class="text-center">Hành động</th>
                         </tr>
@@ -48,7 +48,7 @@
                     {% for person in people %}
                     <tr>
                         <td class="text-muted small">{{ loop.index }}</td>
-                        <td class="fw-semibold">{{ person[1] }}</td>
+                        <td class="fw-semibold sticky-col">{{ person[1] }}</td>
                         <td class="text-muted">{{ person[2] or 'Chưa có' }}</td>
                         <td class="text-center text-nowrap">
                             <button type="button" class="btn btn-sm btn-warning py-0" data-bs-toggle="modal" data-bs-target="#editPersonModal{{ person[0] }}" data-feedback="off">✏️</button>

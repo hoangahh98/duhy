@@ -106,8 +106,8 @@
             <span class="small fw-normal">{{ suggestions|length }} bản ghi</span>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 suggestions-table">
+            <div class="table-responsive frozen-table-wrap">
+                <table class="table table-hover align-middle mb-0 suggestions-table frozen-table">
                     <colgroup>
                         <col class="suggestions-col-destination">
                         <col class="suggestions-col-category">
@@ -117,7 +117,7 @@
                     </colgroup>
                     <thead class="table-light">
                         <tr>
-                            <th>Địa danh</th>
+                            <th class="sticky-col">Địa danh</th>
                             <th>Loại</th>
                             <th>Địa điểm</th>
                             <th>Thông tin</th>
@@ -127,7 +127,7 @@
                     <tbody>
                         {% for item in suggestions %}
                         <tr>
-                            <td class="fw-semibold">{{ item[2] }}</td>
+                            <td class="fw-semibold sticky-col">{{ item[2] }}</td>
                             <td><span class="badge bg-success">{{ item[3] }}</span></td>
                             <td>
                                 <div class="fw-semibold">{{ item[4] }}</div>

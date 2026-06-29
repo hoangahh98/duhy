@@ -441,6 +441,12 @@ def chi_tiet_ban_to_lieng(game_id):
     available_clients = EntertainmentLiengGameModel.get_available_clients(game_id)
     actions = EntertainmentLiengGameModel.get_actions(game_id)
     my_participant_id = EntertainmentLiengGameModel.participant_for_user(game_id, user)
+    turn_left = EntertainmentLiengGameModel.TURN_SECONDS
+    if game[2] == 'playing' and game[8]:
+        try:
+            turn_left = max(0, EntertainmentLiengGameModel.TURN_SECONDS - int((datetime.now(game[8].tzinfo) - game[8]).total_seconds()))
+        except Exception:
+            turn_left = EntertainmentLiengGameModel.TURN_SECONDS
     return render_template(
         'giai_tri_to_lieng_chi_tiet.html',
         user=user,
@@ -450,6 +456,7 @@ def chi_tiet_ban_to_lieng(game_id):
         actions=actions,
         my_participant_id=my_participant_id,
         turn_seconds=EntertainmentLiengGameModel.TURN_SECONDS,
+        turn_left=turn_left,
     )
 
 

@@ -114,7 +114,7 @@
                 {% if game[2] == 'playing' %}
                     <div class="alert alert-success mt-3 mb-0">
                         Đến lượt: <strong>{% for p in participants %}{% if p[0] == game[7] %}{{ p[1] }}{% endif %}{% endfor %}</strong>
-                        · Còn <strong id="turnCountdown">{{ turn_seconds }}</strong>s
+                        · Còn <strong id="turnCountdown">{{ turn_left }}</strong>s
                     </div>
                 {% endif %}
             </div>

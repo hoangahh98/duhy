@@ -48,7 +48,13 @@
                     <tbody>
                         {% for expense in expenses %}
                         <tr>
-                            <td class="sticky-col fw-semibold">{{ expense.row[2] }}<div class="small text-muted">{{ expense.row[1].strftime('%d/%m/%Y') if expense.row[1].strftime is defined else expense.row[1] }}</div></td>
+                            <td class="sticky-col">
+                                <div class="fw-semibold">{{ expense.row[2] }}</div>
+                                <div class="small text-muted">{{ expense.row[1].strftime('%d/%m/%Y') if expense.row[1].strftime is defined else expense.row[1] }}</div>
+                                {% if expense.row[4] %}
+                                <div class="small">{{ expense.row[4] }}</div>
+                                {% endif %}
+                            </td>
                             <td>{{ expense.row[8] or '-' }}</td>
                             {% for member in members %}
                                 <td class="{% if member[0] == viewer_member_id %}table-primary fw-semibold{% endif %}">{{ expense.splits.get(member[0], 0)|vnd }}đ</td>

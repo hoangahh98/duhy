@@ -1,3 +1,5 @@
+import random
+
 from db import db_cursor
 from config import SUPER_ADMIN_EMAIL, normalize_admin_user
 
@@ -1064,6 +1066,327 @@ class EntertainmentCardGameModel:
                 SET status = 'ended', ended_at = CURRENT_TIMESTAMP
                 WHERE id = %s;
             """, (game_id,))
+
+
+class EntertainmentLiengGameModel:
+    TURN_SECONDS = 60
+
+    @staticmethod
+    def create_game(name, min_bet, max_bet=None, owner_admin_id=None, created_by_role=None, created_by_client_id=None):
+        game_name = (name or "").strip() or "Ghi điểm tố liêng"
+        min_bet = max(1, int(min_bet or 1))
+        max_bet = int(max_bet) if str(max_bet or "").strip() else None
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO entertainment_lieng_games (
+                    name, min_bet, max_bet, owner_admin_id, created_by_role, created_by_client_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id;
+            """, (game_name, min_bet, max_bet, owner_admin_id, created_by_role, created_by_client_id))
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def get_games(limit=50):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT g.id, g.name, g.status, g.min_bet, g.max_bet, g.pot, g.round_no,
+                       COALESCE(admin.display_name, client.display_name, g.created_by_role, 'Không rõ') AS creator_name,
+                       COUNT(p.id) AS player_count,
+                       g.created_at
+                FROM entertainment_lieng_games g
+                LEFT JOIN users admin ON admin.id = g.owner_admin_id
+                LEFT JOIN user_clients client ON client.id = g.created_by_client_id
+                LEFT JOIN entertainment_lieng_participants p ON p.game_id = g.id AND p.active = TRUE
+                GROUP BY g.id, admin.display_name, client.display_name
+                ORDER BY CASE WHEN g.status IN ('setup', 'playing') THEN 0 ELSE 1 END, g.created_at DESC
+                LIMIT %s;
+            """, (limit,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_game(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, name, status, min_bet, max_bet, pot, round_no,
+                       current_turn_participant_id, turn_started_at,
+                       owner_admin_id, created_by_role, created_by_client_id, created_at, ended_at
+                FROM entertainment_lieng_games
+                WHERE id = %s;
+            """, (game_id,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def delete_game(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("DELETE FROM entertainment_lieng_games WHERE id = %s;", (game_id,))
+            return cursor.rowcount
+
+    @staticmethod
+    def get_participants(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT id, display_name, user_role, admin_id, user_client_id, seat_no,
+                       active, folded, current_bet, score, last_action_at
+                FROM entertainment_lieng_participants
+                WHERE game_id = %s AND active = TRUE
+                ORDER BY COALESCE(seat_no, 9999), id;
+            """, (game_id,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_actions(game_id, limit=40):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT a.id, a.round_no, a.action_type, a.amount, a.note, a.created_at,
+                       p.display_name
+                FROM entertainment_lieng_actions a
+                LEFT JOIN entertainment_lieng_participants p ON p.id = a.participant_id
+                WHERE a.game_id = %s
+                ORDER BY a.id DESC
+                LIMIT %s;
+            """, (game_id, limit))
+            return cursor.fetchall()
+
+    @staticmethod
+    def get_available_clients(game_id):
+        with db_cursor() as cursor:
+            cursor.execute("""
+                SELECT c.id, c.display_name, c.email
+                FROM user_clients c
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM entertainment_lieng_participants p
+                    WHERE p.game_id = %s AND p.user_client_id = c.id AND p.active = TRUE
+                )
+                ORDER BY c.display_name ASC;
+            """, (game_id,))
+            return cursor.fetchall()
+
+    @staticmethod
+    def add_client(game_id, user_client_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("SELECT display_name FROM user_clients WHERE id = %s;", (user_client_id,))
+            client = cursor.fetchone()
+            if not client:
+                raise ValueError("Không tìm thấy client.")
+            cursor.execute("""
+                INSERT INTO entertainment_lieng_participants (game_id, display_name, user_role, user_client_id)
+                VALUES (%s, %s, 'vdv', %s)
+                ON CONFLICT (game_id, user_client_id) WHERE user_client_id IS NOT NULL
+                DO UPDATE SET active = TRUE, display_name = EXCLUDED.display_name
+                RETURNING id;
+            """, (game_id, client[0], user_client_id))
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def add_current_user(game_id, user):
+        with db_cursor(commit=True) as cursor:
+            if user.get("role") == "admin":
+                cursor.execute("""
+                    INSERT INTO entertainment_lieng_participants (game_id, display_name, user_role, admin_id)
+                    VALUES (%s, %s, 'admin', %s)
+                    ON CONFLICT (game_id, admin_id) WHERE admin_id IS NOT NULL
+                    DO UPDATE SET active = TRUE, display_name = EXCLUDED.display_name
+                    RETURNING id;
+                """, (game_id, user.get("display_name") or user.get("email") or "Admin", user.get("id")))
+            else:
+                cursor.execute("""
+                    INSERT INTO entertainment_lieng_participants (game_id, display_name, user_role, user_client_id)
+                    VALUES (%s, %s, 'vdv', %s)
+                    ON CONFLICT (game_id, user_client_id) WHERE user_client_id IS NOT NULL
+                    DO UPDATE SET active = TRUE, display_name = EXCLUDED.display_name
+                    RETURNING id;
+                """, (game_id, user.get("display_name") or user.get("ten") or user.get("email") or "Client", user.get("id")))
+            return cursor.fetchone()[0]
+
+    @staticmethod
+    def shuffle_seats(game_id):
+        participants = EntertainmentLiengGameModel.get_participants(game_id)
+        shuffled = list(participants)
+        random.shuffle(shuffled)
+        with db_cursor(commit=True) as cursor:
+            for seat_no, participant in enumerate(shuffled, start=1):
+                cursor.execute("UPDATE entertainment_lieng_participants SET seat_no = %s WHERE id = %s;", (seat_no, participant[0]))
+        return len(shuffled)
+
+    @staticmethod
+    def participant_for_user(game_id, user):
+        with db_cursor() as cursor:
+            if user.get("role") == "admin":
+                cursor.execute("""
+                    SELECT id FROM entertainment_lieng_participants
+                    WHERE game_id = %s AND admin_id = %s AND active = TRUE LIMIT 1;
+                """, (game_id, user.get("id")))
+            else:
+                cursor.execute("""
+                    SELECT id FROM entertainment_lieng_participants
+                    WHERE game_id = %s AND user_client_id = %s AND active = TRUE LIMIT 1;
+                """, (game_id, user.get("id")))
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+    @staticmethod
+    def _next_turn(cursor, game_id, current_id=None):
+        cursor.execute("""
+            SELECT id
+            FROM entertainment_lieng_participants
+            WHERE game_id = %s AND active = TRUE AND folded = FALSE
+            ORDER BY COALESCE(seat_no, 9999), id;
+        """, (game_id,))
+        ids = [row[0] for row in cursor.fetchall()]
+        if len(ids) <= 1:
+            return None
+        if current_id not in ids:
+            return ids[0]
+        return ids[(ids.index(current_id) + 1) % len(ids)]
+
+    @staticmethod
+    def _finish_if_one_left(cursor, game_id):
+        cursor.execute("""
+            SELECT id, display_name
+            FROM entertainment_lieng_participants
+            WHERE game_id = %s AND active = TRUE AND folded = FALSE;
+        """, (game_id,))
+        rows = cursor.fetchall()
+        if len(rows) != 1:
+            return False
+        winner_id, winner_name = rows[0]
+        cursor.execute("SELECT pot, round_no FROM entertainment_lieng_games WHERE id = %s;", (game_id,))
+        pot, round_no = cursor.fetchone()
+        cursor.execute("UPDATE entertainment_lieng_participants SET score = score + %s WHERE id = %s;", (pot, winner_id))
+        cursor.execute("""
+            INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, amount, note)
+            VALUES (%s, %s, %s, 'win', %s, %s);
+        """, (game_id, winner_id, round_no, pot, f"{winner_name} thắng pot"))
+        cursor.execute("""
+            UPDATE entertainment_lieng_games
+            SET status = 'setup', pot = 0, current_turn_participant_id = NULL, turn_started_at = NULL
+            WHERE id = %s;
+        """, (game_id,))
+        return True
+
+    @staticmethod
+    def apply_timeout_if_needed(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                SELECT current_turn_participant_id
+                FROM entertainment_lieng_games
+                WHERE id = %s AND status = 'playing'
+                  AND current_turn_participant_id IS NOT NULL
+                  AND turn_started_at < NOW() - INTERVAL '60 seconds';
+            """, (game_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            participant_id = row[0]
+            cursor.execute("""
+                UPDATE entertainment_lieng_participants
+                SET folded = TRUE, last_action_at = CURRENT_TIMESTAMP
+                WHERE id = %s;
+            """, (participant_id,))
+            cursor.execute("""
+                INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, note)
+                SELECT id, %s, round_no, 'timeout_fold', 'Quá 60 giây, tự bỏ'
+                FROM entertainment_lieng_games WHERE id = %s;
+            """, (participant_id, game_id))
+            if not EntertainmentLiengGameModel._finish_if_one_left(cursor, game_id):
+                next_id = EntertainmentLiengGameModel._next_turn(cursor, game_id, participant_id)
+                cursor.execute("""
+                    UPDATE entertainment_lieng_games
+                    SET current_turn_participant_id = %s, turn_started_at = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (next_id, game_id))
+            return True
+
+    @staticmethod
+    def start_round(game_id):
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("SELECT min_bet FROM entertainment_lieng_games WHERE id = %s;", (game_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("Không tìm thấy bàn.")
+            min_bet = int(row[0])
+            cursor.execute("""
+                SELECT id FROM entertainment_lieng_participants
+                WHERE game_id = %s AND active = TRUE
+                ORDER BY COALESCE(seat_no, 9999), id;
+            """, (game_id,))
+            ids = [item[0] for item in cursor.fetchall()]
+            if len(ids) < 2:
+                raise ValueError("Cần ít nhất 2 người chơi để bắt đầu.")
+            pot = min_bet * len(ids)
+            cursor.execute("""
+                UPDATE entertainment_lieng_participants
+                SET folded = FALSE, current_bet = %s, score = score - %s
+                WHERE game_id = %s AND active = TRUE;
+            """, (min_bet, min_bet, game_id))
+            cursor.execute("""
+                UPDATE entertainment_lieng_games
+                SET status = 'playing', pot = %s, round_no = round_no + 1,
+                    current_turn_participant_id = %s, turn_started_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING round_no;
+            """, (pot, ids[0], game_id))
+            round_no = cursor.fetchone()[0]
+            for participant_id in ids:
+                cursor.execute("""
+                    INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, amount, note)
+                    VALUES (%s, %s, %s, 'ante', %s, 'Trừ min cược');
+                """, (game_id, participant_id, round_no, min_bet))
+            return round_no
+
+    @staticmethod
+    def act(game_id, participant_id, action_type, amount=0):
+        amount = int(amount or 0)
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                SELECT status, min_bet, max_bet, current_turn_participant_id, round_no
+                FROM entertainment_lieng_games WHERE id = %s;
+            """, (game_id,))
+            game = cursor.fetchone()
+            if not game:
+                raise ValueError("Không tìm thấy bàn.")
+            status, min_bet, max_bet, current_turn_id, round_no = game
+            if status != 'playing':
+                raise ValueError("Ván chưa bắt đầu.")
+            if current_turn_id != participant_id:
+                raise ValueError("Chưa đến lượt của bạn.")
+            if action_type == 'bet':
+                if amount < int(min_bet):
+                    raise ValueError("Điểm tố phải lớn hơn hoặc bằng min cược.")
+                if max_bet is not None and amount > int(max_bet):
+                    raise ValueError("Điểm tố vượt max cược 1 vòng.")
+                cursor.execute("""
+                    UPDATE entertainment_lieng_participants
+                    SET current_bet = current_bet + %s, score = score - %s, last_action_at = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (amount, amount, participant_id))
+                cursor.execute("UPDATE entertainment_lieng_games SET pot = pot + %s WHERE id = %s;", (amount, game_id))
+                cursor.execute("""
+                    INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, amount)
+                    VALUES (%s, %s, %s, 'bet', %s);
+                """, (game_id, participant_id, round_no, amount))
+            elif action_type == 'fold':
+                cursor.execute("""
+                    UPDATE entertainment_lieng_participants
+                    SET folded = TRUE, last_action_at = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (participant_id,))
+                cursor.execute("""
+                    INSERT INTO entertainment_lieng_actions (game_id, participant_id, round_no, action_type, note)
+                    VALUES (%s, %s, %s, 'fold', 'Bỏ bài');
+                """, (game_id, participant_id, round_no))
+            else:
+                raise ValueError("Hành động không hợp lệ.")
+
+            if not EntertainmentLiengGameModel._finish_if_one_left(cursor, game_id):
+                next_id = EntertainmentLiengGameModel._next_turn(cursor, game_id, participant_id)
+                cursor.execute("""
+                    UPDATE entertainment_lieng_games
+                    SET current_turn_participant_id = %s, turn_started_at = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (next_id, game_id))
 
 
 VanDongVienModel = UserClientModel

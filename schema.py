@@ -419,6 +419,67 @@ ON entertainment_card_rounds (game_id, round_no DESC);
 
 CREATE INDEX IF NOT EXISTS idx_entertainment_card_scores_round
 ON entertainment_card_scores (round_id, player_id);
+
+CREATE TABLE IF NOT EXISTS entertainment_lieng_games (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL DEFAULT 'Ghi điểm tố liêng',
+    status VARCHAR(20) NOT NULL DEFAULT 'setup',
+    min_bet INTEGER NOT NULL DEFAULT 1,
+    max_bet INTEGER,
+    pot INTEGER NOT NULL DEFAULT 0,
+    round_no INTEGER NOT NULL DEFAULT 0,
+    current_turn_participant_id INTEGER,
+    turn_started_at TIMESTAMP,
+    owner_admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_by_role VARCHAR(50),
+    created_by_client_id INTEGER REFERENCES user_clients(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entertainment_lieng_participants (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES entertainment_lieng_games(id) ON DELETE CASCADE,
+    display_name VARCHAR(255) NOT NULL,
+    user_role VARCHAR(50),
+    admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_client_id INTEGER REFERENCES user_clients(id) ON DELETE SET NULL,
+    seat_no INTEGER,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    folded BOOLEAN NOT NULL DEFAULT FALSE,
+    current_bet INTEGER NOT NULL DEFAULT 0,
+    score INTEGER NOT NULL DEFAULT 0,
+    last_action_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entertainment_lieng_actions (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES entertainment_lieng_games(id) ON DELETE CASCADE,
+    participant_id INTEGER REFERENCES entertainment_lieng_participants(id) ON DELETE SET NULL,
+    round_no INTEGER NOT NULL DEFAULT 0,
+    action_type VARCHAR(50) NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 0,
+    note TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_lieng_games_status
+ON entertainment_lieng_games (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_lieng_participants_game
+ON entertainment_lieng_participants (game_id, active, seat_no);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_entertainment_lieng_participants_client
+ON entertainment_lieng_participants (game_id, user_client_id)
+WHERE user_client_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_entertainment_lieng_participants_admin
+ON entertainment_lieng_participants (game_id, admin_id)
+WHERE admin_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_entertainment_lieng_actions_game
+ON entertainment_lieng_actions (game_id, round_no, created_at DESC);
 """
 
 

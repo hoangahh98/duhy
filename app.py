@@ -6,7 +6,7 @@ All logs stored in app_logs table
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, g, send_from_directory, make_response, flash
 import os
 import random
-from models import VanDongVienModel, AdminUserModel, TournamentModel, DangKyGiaiModel, DoiBongModel, MatchModel, EntertainmentCardGameModel
+from models import VanDongVienModel, AdminUserModel, TournamentModel, DangKyGiaiModel, DoiBongModel, MatchModel, EntertainmentCardGameModel, EntertainmentLiengGameModel
 from services import FinanceService
 from knockout_logic import MatchSchedulerService
 from auth import AuthService, login_required, admin_required
@@ -395,7 +395,140 @@ def xoa_van_ghi_diem(game_id):
     except Exception as e:
         DBLogger.log_error(f"Error deleting entertainment card game: {str(e)}", user.get('email'), f'/giai-tri/ghi-diem/{game_id}/xoa', context=traceback.format_exc())
         flash('Không xóa được ván ghi điểm.', 'danger')
-    return redirect(url_for('giai_tri_ghi_diem'))
+        return redirect(url_for('giai_tri_ghi_diem'))
+
+
+@app.route('/giai-tri/to-lieng')
+@login_required
+def giai_tri_to_lieng():
+    user = session.get('user', {})
+    DBLogger.log_request('GET', '/giai-tri/to-lieng', user.get('email'))
+    games = EntertainmentLiengGameModel.get_games()
+    return render_template('giai_tri_to_lieng.html', user=user, games=games)
+
+
+@app.route('/giai-tri/to-lieng/tao', methods=['POST'])
+@login_required
+def tao_ban_to_lieng():
+    user = session.get('user', {})
+    try:
+        game_id = EntertainmentLiengGameModel.create_game(
+            request.form.get('name'),
+            request.form.get('min_bet'),
+            request.form.get('max_bet'),
+            owner_admin_id=user.get('id') if user.get('role') == 'admin' else None,
+            created_by_role=user.get('role'),
+            created_by_client_id=user.get('id') if user.get('role') == 'vdv' else None,
+        )
+        EntertainmentLiengGameModel.add_current_user(game_id, user)
+        flash('Đã tạo bàn tố liêng.', 'success')
+        return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+    except Exception as e:
+        DBLogger.log_error(f"Error creating lieng game: {str(e)}", user.get('email'), '/giai-tri/to-lieng/tao', context=traceback.format_exc())
+        flash(str(e) if isinstance(e, ValueError) else 'Không tạo được bàn tố liêng.', 'danger')
+        return redirect(url_for('giai_tri_to_lieng'))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>')
+@login_required
+def chi_tiet_ban_to_lieng(game_id):
+    user = session.get('user', {})
+    EntertainmentLiengGameModel.apply_timeout_if_needed(game_id)
+    game = EntertainmentLiengGameModel.get_game(game_id)
+    if not game:
+        return "Không tìm thấy bàn tố liêng", 404
+    participants = EntertainmentLiengGameModel.get_participants(game_id)
+    available_clients = EntertainmentLiengGameModel.get_available_clients(game_id)
+    actions = EntertainmentLiengGameModel.get_actions(game_id)
+    my_participant_id = EntertainmentLiengGameModel.participant_for_user(game_id, user)
+    return render_template(
+        'giai_tri_to_lieng_chi_tiet.html',
+        user=user,
+        game=game,
+        participants=participants,
+        available_clients=available_clients,
+        actions=actions,
+        my_participant_id=my_participant_id,
+        turn_seconds=EntertainmentLiengGameModel.TURN_SECONDS,
+    )
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/xoa', methods=['POST'])
+@login_required
+def xoa_ban_to_lieng(game_id):
+    user = session.get('user', {})
+    game = EntertainmentLiengGameModel.get_game(game_id)
+    if not game:
+        flash('Không tìm thấy bàn tố liêng.', 'warning')
+        return redirect(url_for('giai_tri_to_lieng'))
+    if user.get('role') != 'admin' and not (user.get('role') == 'vdv' and game[11] == user.get('id')):
+        flash('Bạn không có quyền xóa bàn này.', 'danger')
+        return redirect(url_for('giai_tri_to_lieng'))
+    EntertainmentLiengGameModel.delete_game(game_id)
+    flash('Đã xóa bàn tố liêng.', 'success')
+    return redirect(url_for('giai_tri_to_lieng'))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/them-toi', methods=['POST'])
+@login_required
+def them_toi_vao_to_lieng(game_id):
+    user = session.get('user', {})
+    EntertainmentLiengGameModel.add_current_user(game_id, user)
+    flash('Đã thêm bạn vào bàn.', 'success')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/nguoi-choi', methods=['POST'])
+@login_required
+def them_nguoi_choi_to_lieng(game_id):
+    client_ids = [item for item in request.form.getlist('client_ids') if item]
+    if not client_ids:
+        flash('Chọn ít nhất một người chơi.', 'warning')
+        return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+    for client_id in client_ids:
+        EntertainmentLiengGameModel.add_client(game_id, int(client_id))
+    flash(f'Đã thêm {len(client_ids)} người chơi.', 'success')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/quay-vi-tri', methods=['POST'])
+@login_required
+def quay_vi_tri_to_lieng(game_id):
+    count = EntertainmentLiengGameModel.shuffle_seats(game_id)
+    flash(f'Đã quay ngẫu nhiên vị trí cho {count} người chơi.', 'success')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/bat-dau', methods=['POST'])
+@login_required
+def bat_dau_to_lieng(game_id):
+    try:
+        round_no = EntertainmentLiengGameModel.start_round(game_id)
+        flash(f'Đã bắt đầu ván {round_no}. Mỗi người bị trừ min cược vào pot.', 'success')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+
+
+@app.route('/giai-tri/to-lieng/<int:game_id>/hanh-dong', methods=['POST'])
+@login_required
+def hanh_dong_to_lieng(game_id):
+    user = session.get('user', {})
+    participant_id = EntertainmentLiengGameModel.participant_for_user(game_id, user)
+    if not participant_id:
+        flash('Bạn chưa có trong bàn này.', 'danger')
+        return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
+    try:
+        EntertainmentLiengGameModel.act(
+            game_id,
+            participant_id,
+            request.form.get('action_type'),
+            request.form.get('amount'),
+        )
+        flash('Đã ghi hành động.', 'success')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('chi_tiet_ban_to_lieng', game_id=game_id))
 
 
 @app.route('/giai-tri/ghi-diem/<int:game_id>')
@@ -564,10 +697,8 @@ def ket_thuc_van_ghi_diem(game_id):
 
 @app.route('/giai-tri/ta-la')
 @login_required
-def giai_tri_ta_la():
-    user = session.get('user', {})
-    DBLogger.log_request('GET', '/giai-tri/ta-la', user.get('email'))
-    return render_template('giai_tri_ta_la.html', user=user)
+def legacy_ta_la_redirect():
+    return redirect(url_for('giai_tri_to_lieng'))
 
 
 @app.route('/giai-dau')

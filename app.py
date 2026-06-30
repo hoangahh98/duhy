@@ -13,7 +13,6 @@ from auth import AuthService, login_required, admin_required
 from config import (
     FLASK_SECRET_KEY,
     FLASK_SECRET_KEY_ERROR,
-    BASE_URL,
     LOG_ALL_REQUESTS,
     SLOW_REQUEST_MS,
     SUPER_ADMIN_EMAIL,
@@ -1896,6 +1895,7 @@ def them_thanh_vien_doi_bong(doi_bong_id):
                     form_data['ghi_chu'],
                 )
                 if added_id:
+                    DoiBongModel.ensure_member_default_payment(added_id, selected_month)
                     added_count += 1
         DBLogger.log_success(f"Team members added: {added_count}", user.get('email'), f'/doi-bong/{doi_bong_id}/thanh-vien/them')
         return redirect(f'/doi-bong/{doi_bong_id}?thang={selected_month}')
@@ -1920,6 +1920,7 @@ def sua_thanh_vien_doi_bong(doi_bong_id, thanh_vien_id):
                 form_data['loai_thanh_vien'],
                 form_data['ghi_chu'],
             )
+            DoiBongModel.ensure_member_default_payment(thanh_vien_id, selected_month)
             DBLogger.log_success(f"Team member updated: {thanh_vien_id}", user.get('email'), f'/doi-bong/{doi_bong_id}/thanh-vien/{thanh_vien_id}/sua')
         return redirect(f'/doi-bong/{doi_bong_id}?thang={selected_month}')
     except Exception as e:
@@ -2257,7 +2258,7 @@ def chi_tiet_giai_admin(giai_id):
             withdrawn_registrations=withdrawn_registrations,
             canh_bao=canh_bao,
             enumerate=enumerate,
-            base_url=BASE_URL,
+            base_url=request.host_url.rstrip('/'),
             admins=admins,
             owner_admin=owner_admin,
             permissions=permissions,
@@ -2304,7 +2305,9 @@ def dang_ky_vdv(giai_id):
         if not van_dong_vien_ids:
             return redirect(f'/giai-dau/{giai_id}/admin?error=full')
 
-        added_count = DangKyGiaiModel.register_many(van_dong_vien_ids, giai_id)
+        giai_detail = prepare_tournament_detail(giai_raw, registrations)
+        default_fee = giai_detail.get('chi_phi_moi_nguoi', 0)
+        added_count = DangKyGiaiModel.register_many(van_dong_vien_ids, giai_id, default_fee)
 
         DBLogger.log_success(f"{added_count} VĐV registered for tournament {giai_id}", user.get('email'), f'/giai-dau/{giai_id}/dang-ky')
         suffix = '?error=full' if added_count < selected_count else ''
@@ -2352,7 +2355,8 @@ def dang_ky_ngoai_giai(giai_id):
         if errors:
             return render_template('dang_ky_ngoai_giai.html', giai=giai_detail, form_data=form_data, errors=errors), 400
 
-        external_id = DangKyGiaiModel.create_external(giai_id, display_name, email, skill_level)
+        default_fee = giai_detail.get('chi_phi_moi_nguoi', 0)
+        external_id = DangKyGiaiModel.create_external(giai_id, display_name, email, skill_level, default_fee)
         DBLogger.log_success(f"External registration {external_id} for tournament {giai_id}", email, f'/giai-dau/{giai_id}/dang-ky-ngoai')
         return render_template(
             'dang_ky_ngoai_thanh_cong.html',
@@ -2360,7 +2364,6 @@ def dang_ky_ngoai_giai(giai_id):
             display_name=display_name,
             email=email,
             password='123456789',
-            login_url=url_for('login', _external=True),
             tournament_url=url_for('chi_tiet_giai_vdv', giai_id=giai_id, _external=True),
         )
     except Exception as e:

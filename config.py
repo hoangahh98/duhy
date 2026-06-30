@@ -106,9 +106,9 @@ UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 # ============ APP SETTINGS ============
-APP_NAME = "Pickleball Tournament Manager"
+APP_NAME = "Duhy"
 APP_VERSION = "1.0.0"
-BASE_URL = os.environ.get("BASE_URL", "https://pickleball-1-hsk7.onrender.com")
+BASE_URL = os.environ.get("BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "http://localhost:5000"
 
 
 def normalize_admin_user(value):

@@ -493,24 +493,24 @@ class DangKyGiaiModel:
             return grouped
 
     @staticmethod
-    def register(user_client_id, giai_dau_id):
+    def register(user_client_id, giai_dau_id, default_fee=0):
         """Register VĐV for tournament"""
         with db_cursor(commit=True) as cursor:
             cursor.execute("""
-                INSERT INTO dang_ky_giai (user_client_id, giai_dau_id)
-                VALUES (%s, %s);
-            """, (user_client_id, giai_dau_id))
+                INSERT INTO dang_ky_giai (user_client_id, giai_dau_id, so_tien_da_dong)
+                VALUES (%s, %s, %s);
+            """, (user_client_id, giai_dau_id, default_fee))
 
     @staticmethod
-    def register_many(user_client_ids, giai_dau_id):
+    def register_many(user_client_ids, giai_dau_id, default_fee=0):
         """Register many players for one tournament using one transaction."""
-        rows = [(vdv_id, giai_dau_id) for vdv_id in user_client_ids]
+        rows = [(vdv_id, giai_dau_id, default_fee) for vdv_id in user_client_ids]
         if not rows:
             return 0
         with db_cursor(commit=True) as cursor:
             cursor.executemany("""
-                INSERT INTO dang_ky_giai (user_client_id, giai_dau_id)
-                VALUES (%s, %s);
+                INSERT INTO dang_ky_giai (user_client_id, giai_dau_id, so_tien_da_dong)
+                VALUES (%s, %s, %s);
             """, rows)
         return len(rows)
 
@@ -558,21 +558,25 @@ class DangKyGiaiModel:
             """, (dang_ky_id,))
 
     @staticmethod
-    def create_external(giai_id, display_name, email, skill_level):
+    def create_external(giai_id, display_name, email, skill_level, default_fee=0):
         display_name = (display_name or '').strip()
         email = (email or '').strip().lower()
         skill_level = (skill_level or 'C').strip().upper()
         with db_cursor(commit=True) as cursor:
             cursor.execute("""
-                INSERT INTO dang_ky_giai_ngoai (giai_dau_id, display_name, email, skill_level)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO dang_ky_giai_ngoai (giai_dau_id, display_name, email, skill_level, so_tien_da_dong)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (giai_dau_id, email)
                 DO UPDATE SET display_name = EXCLUDED.display_name,
                               skill_level = EXCLUDED.skill_level,
+                              so_tien_da_dong = CASE
+                                  WHEN dang_ky_giai_ngoai.registration_status = 'withdrawn' THEN EXCLUDED.so_tien_da_dong
+                                  ELSE dang_ky_giai_ngoai.so_tien_da_dong
+                              END,
                               registration_status = 'active',
                               withdrawn_at = NULL
                 RETURNING id;
-            """, (giai_id, display_name, email, skill_level))
+            """, (giai_id, display_name, email, skill_level, default_fee))
             return cursor.fetchone()[0]
 
     @staticmethod
@@ -704,14 +708,19 @@ class DoiBongModel:
                 SELECT tv.id, tv.user_client_id, COALESCE(vdv.display_name, tv.ten_thanh_vien),
                        COALESCE(vdv.skill_level, tv.skill_level), vdv.email,
                        tv.loai_thanh_vien, tv.notes,
-                       COALESCE(dp.so_tien_da_dong, 0), COALESCE(dp.trang_thai_dong_tien, 'Chưa đóng'),
+                       COALESCE(
+                           dp.so_tien_da_dong,
+                           CASE WHEN tv.loai_thanh_vien = 'co_dinh' THEN COALESCE(qt.muc_phi_thang, 0) ELSE 0 END
+                       ),
+                       COALESCE(dp.trang_thai_dong_tien, 'Chưa đóng'),
                        COALESCE(dp.notes, ''), dp.id
                 FROM doi_bong_thanh_vien tv
                 LEFT JOIN user_clients vdv ON tv.user_client_id = vdv.id
                 LEFT JOIN doi_bong_dong_phi dp ON tv.id = dp.thanh_vien_id AND dp.thang = %s
+                LEFT JOIN doi_bong_quy_thang qt ON qt.doi_bong_id = tv.doi_bong_id AND qt.thang = %s
                 WHERE tv.doi_bong_id = %s AND tv.active = TRUE
                 ORDER BY COALESCE(vdv.display_name, tv.ten_thanh_vien) ASC;
-            """, (thang, doi_bong_id))
+            """, (thang, thang, doi_bong_id))
             return cursor.fetchall()
 
     @staticmethod
@@ -772,6 +781,13 @@ class DoiBongModel:
         thang = DoiBongModel.normalize_month(thang)
         with db_cursor(commit=True) as cursor:
             cursor.execute("""
+                SELECT COALESCE(muc_phi_thang, 0)
+                FROM doi_bong_quy_thang
+                WHERE doi_bong_id = %s AND thang = %s;
+            """, (doi_bong_id, thang))
+            old_fee_row = cursor.fetchone()
+            old_fee = old_fee_row[0] if old_fee_row else 0
+            cursor.execute("""
                 INSERT INTO doi_bong_quy_thang
                     (doi_bong_id, thang, muc_phi_thang, chi_phi_san_bai, tien_san_con_lai_thang_truoc, notes)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -783,6 +799,33 @@ class DoiBongModel:
                     notes=EXCLUDED.notes,
                     updated_at=CURRENT_TIMESTAMP;
             """, (doi_bong_id, thang, muc_phi_thang, chi_phi_san_bai, tien_san_con_lai_thang_truoc, notes))
+            cursor.execute("""
+                INSERT INTO doi_bong_dong_phi (thanh_vien_id, thang, so_tien_da_dong, trang_thai_dong_tien)
+                SELECT tv.id, %s, %s, 'Chưa đóng'
+                FROM doi_bong_thanh_vien tv
+                WHERE tv.doi_bong_id = %s AND tv.active = TRUE AND tv.loai_thanh_vien = 'co_dinh'
+                ON CONFLICT (thanh_vien_id, thang)
+                DO UPDATE SET
+                    so_tien_da_dong = CASE
+                        WHEN doi_bong_dong_phi.so_tien_da_dong <= GREATEST(%s, EXCLUDED.so_tien_da_dong)
+                        THEN EXCLUDED.so_tien_da_dong
+                        ELSE doi_bong_dong_phi.so_tien_da_dong
+                    END,
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (thang, muc_phi_thang, doi_bong_id, old_fee))
+
+    @staticmethod
+    def ensure_member_default_payment(thanh_vien_id, thang):
+        thang = DoiBongModel.normalize_month(thang)
+        with db_cursor(commit=True) as cursor:
+            cursor.execute("""
+                INSERT INTO doi_bong_dong_phi (thanh_vien_id, thang, so_tien_da_dong, trang_thai_dong_tien)
+                SELECT tv.id, %s, COALESCE(qt.muc_phi_thang, 0), 'Chưa đóng'
+                FROM doi_bong_thanh_vien tv
+                LEFT JOIN doi_bong_quy_thang qt ON qt.doi_bong_id = tv.doi_bong_id AND qt.thang = %s
+                WHERE tv.id = %s AND tv.active = TRUE AND tv.loai_thanh_vien = 'co_dinh'
+                ON CONFLICT (thanh_vien_id, thang) DO NOTHING;
+            """, (thang, thang, thanh_vien_id))
 
     @staticmethod
     def update_payments(thang, updates):

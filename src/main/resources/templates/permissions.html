@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head th:replace="~{layout :: head('Phan quyen')}"></head>
+<body>
+<nav th:replace="~{layout :: topbar}"></nav>
+<main class="app-shell">
+    <h1 class="h4 fw-bold mb-3">Phan quyen admin</h1>
+    <section class="card-lite p-3">
+        <table class="table align-middle">
+            <thead><tr><th>Admin</th><th th:each="f : ${features}" th:text="${f.label()}"></th></tr></thead>
+            <tbody>
+            <tr th:each="row : ${rows}">
+                <td th:text="${row.admin.displayName + ' (' + row.admin.username + ')'}"></td>
+                <td th:each="f : ${features}">
+                    <form method="post" action="/permissions">
+                        <input type="hidden" name="adminId" th:value="${row.admin.id}">
+                        <input type="hidden" name="feature" th:value="${f.name()}">
+                        <input type="hidden" name="enabled" th:value="${!row.enabled.get(f)}">
+                        <button class="btn btn-sm"
+                                th:classappend="${row.enabled.get(f)} ? 'btn-success' : 'btn-outline-secondary'"
+                                th:text="${row.enabled.get(f)} ? 'Co' : 'Khong'"
+                                data-loading-text="..."></button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+<script src="/js/app.js"></script>
+</body>
+</html>

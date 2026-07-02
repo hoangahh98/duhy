@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi">
+<head th:replace="~{layout :: head('Tao giai')}"></head>
+<body>
+<nav th:replace="~{layout :: topbar}"></nav>
+<main class="app-shell">
+    <section class="card-lite p-3">
+        <h1 class="h4 fw-bold">Tao giai</h1>
+        <form method="post" action="/tournaments">
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Ten giai</label><input class="form-control" name="name" required></div>
+                <div class="col-md-6"><label class="form-label">Dia diem</label><input class="form-control" name="venue"></div>
+                <div class="col-md-4"><label class="form-label">Thoi gian</label><input class="form-control" type="datetime-local" name="startTime"></div>
+                <div class="col-md-4"><label class="form-label">So san</label><input class="form-control" type="number" name="courtCount" value="1"></div>
+                <div class="col-md-4"><label class="form-label">So nguoi du kien</label><input class="form-control" type="number" name="expectedPlayers" value="10"></div>
+                <div class="col-md-6"><label class="form-label">Loai dau</label><select class="form-select" name="playType"><option value="SINGLES">Thi don</option><option value="DOUBLES">Thi doi</option></select></div>
+                <div class="col-md-6"><label class="form-label">The thuc</label><select class="form-select" name="format"><option value="ROUND_ROBIN">Vong tron</option><option value="GROUP_KNOCKOUT">Bang + knockout</option></select></div>
+                <div class="col-md-3"><label class="form-label">Cham diem</label><input class="form-control" type="number" name="touchScore" value="11"></div>
+                <div class="col-md-3"><label class="form-label">Max diem</label><input class="form-control" type="number" name="maxScore" value="15"></div>
+                <div class="col-md-3"><label class="form-label">San bai</label><input class="form-control money-input" name="courtCost" value="0"></div>
+                <div class="col-md-3"><label class="form-label">An uong</label><input class="form-control money-input" name="foodCost" value="0"></div>
+                <div class="col-md-3"><label class="form-label">Giai thuong</label><input class="form-control money-input" name="prizeCost" value="0"></div>
+                <div class="col-md-3"><label class="form-label">Khac</label><input class="form-control money-input" name="otherCost" value="0"></div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="externalRegistrationEnabled" id="externalRegistrationEnabled">
+                        <label class="form-check-label" for="externalRegistrationEnabled">Cho phep dang ky ngoai</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3"><button class="btn btn-primary" data-loading-text="Dang tao...">Tao giai</button></div>
+        </form>
+    </section>
+</main>
+<script src="/js/app.js"></script>
+</body>
+</html>

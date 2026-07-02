@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi">
+<head th:replace="~{layout :: head('Loi')}"></head>
+<body>
+<nav th:replace="~{layout :: topbar}"></nav>
+<main class="app-shell">
+    <section class="card-lite p-3">
+        <h1 class="h4 fw-bold">Khong the thuc hien</h1>
+        <p class="text-muted mb-3" th:text="${message}"></p>
+        <a class="btn btn-primary" href="/">Ve trang chu</a>
+    </section>
+</main>
+</body>
+</html>

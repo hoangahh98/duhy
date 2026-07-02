@@ -1,6 +1,9 @@
+.idea/
+.vscode/
+target/
+.pytest_cache/
 __pycache__/
-*.py[cod]
+*.iml
 .env
-.venv/
-venv/
+.DS_Store
 *.log

@@ -59,6 +59,6 @@ public class AuthService {
         TournamentRegistration registration = registrations.findByExternalEmailIgnoreCaseAndStatusOrderByIdAsc(email, RegistrationStatus.ACTIVE).stream()
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Sai email hoac mat khau"));
-        return new CurrentUser(registration.getId(), registration.getExternalEmail(), registration.getDisplayName(), UserRole.PLAYER);
+        return new CurrentUser(registration.getId(), registration.getEmail(), registration.getDisplayName(), UserRole.PLAYER);
     }
 }

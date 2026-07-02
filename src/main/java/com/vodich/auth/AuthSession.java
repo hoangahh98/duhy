@@ -14,6 +14,9 @@ public class AuthSession {
     }
 
     public Optional<CurrentUser> current(HttpSession session) {
+        if (session == null) {
+            return Optional.empty();
+        }
         Object value = session.getAttribute(USER_KEY);
         return value instanceof CurrentUser user ? Optional.of(user) : Optional.empty();
     }

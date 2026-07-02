@@ -4,10 +4,14 @@ import com.vodich.auth.UserRole;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "app_log")
 public class AppLog {
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -44,7 +48,7 @@ public class AppLog {
     }
 
     public AppLog(LogLevel level, String category, String action) {
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
         this.level = level;
         this.category = category;
         this.action = action;
@@ -52,6 +56,9 @@ public class AppLog {
 
     public Long getId() { return id; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getCreatedAtVietnam() {
+        return createdAt == null ? null : createdAt.atOffset(ZoneOffset.UTC).atZoneSameInstant(VIETNAM_ZONE).toLocalDateTime();
+    }
     public LogLevel getLevel() { return level; }
     public String getCategory() { return category; }
     public String getAction() { return action; }

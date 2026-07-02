@@ -7,8 +7,8 @@
     <div class="card-lite p-3 mb-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h1 class="h4 fw-bold mb-1">🧯 Monitor Log Hệ Thống</h1>
-                <div class="text-muted small">Chỉ user admin gốc được xem màn hình này.</div>
+                <h1 class="h4 fw-bold mb-1">Monitor Log Hệ Thống</h1>
+                <div class="text-muted small">Chỉ user admin gốc được xem màn hình này. Thời gian hiển thị theo giờ Việt Nam.</div>
             </div>
             <div class="btn-group">
                 <a class="btn btn-sm" th:each="item : ${levels}"
@@ -35,7 +35,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="log : ${logs}">
-                    <td class="small" th:text="${#temporals.format(log.createdAt, 'dd/MM HH:mm:ss')}"></td>
+                    <td class="small" th:text="${#temporals.format(log.createdAtVietnam, 'dd/MM HH:mm:ss')}"></td>
                     <td><span class="badge"
                               th:classappend="${log.level.name() == 'ERROR'} ? 'text-bg-danger' : (${log.level.name() == 'WARN'} ? 'text-bg-warning' : 'text-bg-secondary')"
                               th:text="${log.level}"></span></td>

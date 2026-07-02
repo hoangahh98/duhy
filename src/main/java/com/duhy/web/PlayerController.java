@@ -42,7 +42,7 @@ public class PlayerController {
         require(session);
         String normalizedEmail = email.trim().toLowerCase();
         if (players.existsByEmailIgnoreCase(normalizedEmail)) {
-            return "redirect:/players?error=Email%20da%20ton%20tai%20trong%20danh%20sach%20VDV";
+            return "redirect:/players?error=Email%20%C4%91%C3%A3%20t%E1%BB%93n%20t%E1%BA%A1i%20trong%20danh%20s%C3%A1ch%20V%C4%90V";
         }
         players.save(new Player(displayName, normalizedEmail, skillLevel, notes));
         return "redirect:/players";
@@ -51,7 +51,7 @@ public class PlayerController {
     private void require(HttpSession session) {
         CurrentUser user = auth.current(session).orElseThrow();
         if (!user.admin() || !permissions.can(user, AppFeature.TOURNAMENTS)) {
-            throw new IllegalStateException("Khong co quyen");
+            throw new IllegalStateException("Không có quyền");
         }
     }
 }

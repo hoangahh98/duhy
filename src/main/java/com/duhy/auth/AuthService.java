@@ -41,14 +41,14 @@ public class AuthService {
         String normalized = username == null ? "" : username.trim().toLowerCase();
         if (role == UserRole.ADMIN) {
             AppUser user = users.findByUsernameIgnoreCase(normalized)
-                .orElseThrow(() -> new IllegalArgumentException("Sai tai khoan hoac mat khau"));
+                .orElseThrow(() -> new IllegalArgumentException("Sai tài khoản hoặc mật khẩu"));
             if (!encoder.matches(password, user.getPasswordHash())) {
-                throw new IllegalArgumentException("Sai tai khoan hoac mat khau");
+                throw new IllegalArgumentException("Sai tài khoản hoặc mật khẩu");
             }
             return new CurrentUser(user.getId(), user.getUsername(), user.getDisplayName(), UserRole.ADMIN);
         }
         if (!"123456789".equals(password)) {
-            throw new IllegalArgumentException("Sai email hoac mat khau");
+            throw new IllegalArgumentException("Sai email hoặc mật khẩu");
         }
         return players.findByEmailIgnoreCase(normalized)
             .map(player -> new CurrentUser(player.getId(), player.getEmail(), player.getDisplayName(), UserRole.PLAYER))
@@ -58,7 +58,7 @@ public class AuthService {
     private CurrentUser externalParticipant(String email) {
         TournamentRegistration registration = registrations.findByExternalEmailIgnoreCaseAndStatusOrderByIdAsc(email, RegistrationStatus.ACTIVE).stream()
             .findFirst()
-            .orElseThrow(() -> new IllegalArgumentException("Sai email hoac mat khau"));
+            .orElseThrow(() -> new IllegalArgumentException("Sai email hoặc mật khẩu"));
         return new CurrentUser(registration.getId(), registration.getEmail(), registration.getDisplayName(), UserRole.PLAYER);
     }
 }

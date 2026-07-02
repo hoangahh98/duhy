@@ -1,10 +1,10 @@
 package com.duhy.auth;
 
 public enum AppFeature {
-    TOURNAMENTS("Giai dau"),
-    TEAMS("Doi bong"),
-    TRAVEL("Du lich"),
-    PERMISSIONS("Phan quyen");
+    TOURNAMENTS("Giải đấu"),
+    TEAMS("Đội bóng"),
+    TRAVEL("Du lịch"),
+    PERMISSIONS("Phân quyền");
 
     private final String label;
 

@@ -89,7 +89,7 @@ public class TournamentService {
     public TournamentRegistration registerExternal(Long tournamentId, String name, String email, String skillLevel) {
         Tournament tournament = get(tournamentId);
         if (!tournament.isExternalRegistrationEnabled()) {
-            throw new IllegalStateException("Giai chua mo dang ky ngoai");
+            throw new IllegalStateException("Giải chưa mở đăng ký ngoài");
         }
         return registrations.findByTournamentIdAndExternalEmailIgnoreCase(tournamentId, email)
             .map(existing -> {

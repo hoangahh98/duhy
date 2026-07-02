@@ -61,7 +61,7 @@ public class TournamentController {
     public String detail(HttpSession session, @PathVariable Long id, @PathVariable String section, Model model, HttpServletRequest request) {
         CurrentUser user = require(session, AppFeature.TOURNAMENTS);
         if (!tournaments.canView(user, id)) {
-            throw new IllegalStateException("Khong co quyen");
+            throw new IllegalStateException("Không có quyền");
         }
         Tournament tournament = tournaments.get(id);
         model.addAttribute("tournament", tournament);
@@ -112,7 +112,7 @@ public class TournamentController {
     private CurrentUser require(HttpSession session, AppFeature feature) {
         CurrentUser user = auth.current(session).orElseThrow();
         if (!permissions.can(user, feature)) {
-            throw new IllegalStateException("Khong co quyen");
+            throw new IllegalStateException("Không có quyền");
         }
         return user;
     }
@@ -120,7 +120,7 @@ public class TournamentController {
     private void requireAdmin(HttpSession session, AppFeature feature) {
         CurrentUser user = auth.current(session).orElseThrow();
         if (!user.admin() || !permissions.can(user, feature)) {
-            throw new IllegalStateException("Khong co quyen");
+            throw new IllegalStateException("Không có quyền");
         }
     }
 }

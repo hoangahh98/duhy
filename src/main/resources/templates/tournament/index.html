@@ -1,20 +1,22 @@
 <!doctype html>
 <html lang="vi">
-<head th:replace="~{layout :: head('Giai dau')}"></head>
+<head th:replace="~{layout :: head('Giải Đấu')}"></head>
 <body>
 <nav th:replace="~{layout :: topbar}"></nav>
 <main class="app-shell">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4 fw-bold mb-0">Giai dau</h1>
-        <a class="btn btn-primary" href="/tournaments/new" th:if="${currentUser.admin()}">Tao giai</a>
+    <div class="card-lite p-3 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h4 fw-bold mb-0">🏆 Quản Lý Giải Đấu</h1>
+            <a class="btn btn-success fw-bold" href="/tournaments/new" th:if="${currentUser.admin()}">➕ THÊM GIẢI</a>
+        </div>
     </div>
     <div class="row g-3">
-        <div class="col-md-6" th:each="item : ${tournaments}">
-            <a class="card-lite p-3 d-block text-decoration-none text-dark" th:href="@{/tournaments/{id}/players(id=${item.tournament.id})}">
-                <div class="fw-bold" th:text="${item.tournament.name}"></div>
+        <div class="col-md-4" th:each="item : ${tournaments}">
+            <a class="card-lite p-3 h-100 d-block text-decoration-none text-dark" th:href="@{/tournaments/{id}/players(id=${item.tournament.id})}">
+                <div class="fw-bold text-primary h5" th:text="${item.tournament.name}"></div>
                 <div class="text-muted small">
-                    <span th:text="${item.activeCount}"></span>/<span th:text="${item.tournament.expectedPlayers}"></span> VDV -
-                    Phi <span th:text="${#numbers.formatDecimal(item.minimumFee,0,'COMMA',0,'POINT')}"></span>d
+                    👥 <span th:text="${item.activeCount}"></span>/<span th:text="${item.tournament.expectedPlayers}"></span> VĐV<br>
+                    💰 Lệ phí: <span th:text="${#numbers.formatDecimal(item.minimumFee,0,'COMMA',0,'POINT')}"></span>đ
                 </div>
             </a>
         </div>
